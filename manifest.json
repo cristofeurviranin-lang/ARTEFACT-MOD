@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "a532f669",
+  "version": "6d80338e",
   "clients": [],
   "mods": [
     {
@@ -45,5 +45,65 @@
         }
       ]
     }
-  ]
+  ],
+  "launcher": {
+    "version": "d6d407bd",
+    "files": [
+      {
+        "path": "core.py",
+        "url": "launcher/core.py",
+        "sha256": "b2e081934fc057907c4f4e2426f2350cde4ce526673501812da447a9ffb88ad1"
+      },
+      {
+        "path": "ui.py",
+        "url": "launcher/ui.py",
+        "sha256": "9a7f90329aea0cf4afa654335fdc76ad7275ec3d148b0dd1771bdf4d41f18cb9"
+      },
+      {
+        "path": "joueur.pyw",
+        "url": "launcher/joueur.pyw",
+        "sha256": "615a0fc8c08bc80bd3fcfa11f82c0b5f25419f33122ac1757fcc35e2423bf7f5"
+      },
+      {
+        "path": "assets/bo7_banner.png",
+        "url": "launcher/assets/bo7_banner.png",
+        "sha256": "6f5c8fc517fa64af220ba6601ff1c13a1593440c11a023945f4c33a89497f25c"
+      },
+      {
+        "path": "assets/bo7_thumb.png",
+        "url": "launcher/assets/bo7_thumb.png",
+        "sha256": "5441722398f37b5ecef868e3c33cc07d26218862b56b5b2671fd6eb0403f70f2"
+      },
+      {
+        "path": "assets/coldwar_banner.png",
+        "url": "launcher/assets/coldwar_banner.png",
+        "sha256": "26f4b2d0506fa23977ecb6d3a22ec2b5171e87324e48481985ba5667f736414a"
+      },
+      {
+        "path": "assets/coldwar_thumb.png",
+        "url": "launcher/assets/coldwar_thumb.png",
+        "sha256": "98ec55eb5e3b066252c52c267c0fcb767676457799f8f61ef25ad9b12ee3791f"
+      },
+      {
+        "path": "assets/iw8_banner.png",
+        "url": "launcher/assets/iw8_banner.png",
+        "sha256": "2f0e5005011a15cb52d2554aa9683b7b7fa47b49c4d690f467822c28d1447462"
+      },
+      {
+        "path": "assets/iw8_thumb.png",
+        "url": "launcher/assets/iw8_thumb.png",
+        "sha256": "f1198160e698b780fdfbd8bec336b3d43f2d39bd7eef1e09bd1b1207e465deef"
+      },
+      {
+        "path": "assets/lumen_banner.png",
+        "url": "launcher/assets/lumen_banner.png",
+        "sha256": "7c1443d487a32a7c10492b367f7aec1b7566b173e775c86960d0ba10881a092b"
+      },
+      {
+        "path": "assets/lumen_thumb.png",
+        "url": "launcher/assets/lumen_thumb.png",
+        "sha256": "cacdfdc7094ddc1a32946efb8180bb08fa3d17b183c17569602491f287183dc9"
+      }
+    ]
+  }
 }
