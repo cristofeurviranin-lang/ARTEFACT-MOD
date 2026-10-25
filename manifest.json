@@ -1,58 +1,35 @@
 {
   "format": 2,
-  "version": "d3ece312",
+  "version": "823f2b5d",
   "clients": [],
   "mods": [
     {
-      "id": "bot_ai",
+      "id": "br95_better_bot",
       "client": "iw8",
-      "title": "Bot AI",
-      "description": "Smarter, armed bots. Waves of 3 bots come for you every 30 s and they always stay within 90 m.",
-      "version": "af6855bb",
+      "title": "BR95 BETTER BOT",
+      "description": "The complete bot mod: smarter armed bots, waves of 3 bots on you every 30 s, bots always within 90 m, ammo on every kill, loot drops, and the addbot / removebot / botdifficulty commands.",
+      "version": "94edd72b",
       "files": [
         {
-          "path": "BotAI.gsc",
-          "url": "mods/iw8/bot_ai/BotAI.gsc",
-          "sha256": "28f137ef674525c5b3aafe578e0ce33a53ef39d4860e5c5926ab0ece07bc33bb"
+          "path": "BR95_BetterBot.gsc",
+          "url": "mods/iw8/br95_better_bot/BR95_BetterBot.gsc",
+          "sha256": "591f2cad32ff53e1d23b9dd103e5796588b5cbb131b1a0ca05cd2b9729b7b2cd"
         }
-      ]
-    },
-    {
-      "id": "bot_commands",
-      "client": "iw8",
-      "title": "Bot Commands",
-      "description": "Adds the addbot, removebot and botdifficulty console commands.",
-      "version": "a9e380cf",
-      "files": [
-        {
-          "path": "Bots.gsc",
-          "url": "mods/iw8/bot_commands/Bots.gsc",
-          "sha256": "229c4551bfd79a31b98d39e247910ad7b40b57e7ff48c4cb0e5891c4af2a6218"
-        }
-      ]
-    },
-    {
-      "id": "bot_loot",
-      "client": "iw8",
-      "title": "Bot Loot",
-      "description": "Bots drop ammo and cash when they die.",
-      "version": "be8e382b",
-      "files": [
-        {
-          "path": "BotLoot.gsc",
-          "url": "mods/iw8/bot_loot/BotLoot.gsc",
-          "sha256": "dac8a804e1c6f5f79d457b04e7da43410f07d84fa01856af1d63de98d91d6b70"
-        }
+      ],
+      "replaces": [
+        "BotAI.gsc",
+        "BotLoot.gsc",
+        "Bots.gsc"
       ]
     }
   ],
   "launcher": {
-    "version": "45fbb7be",
+    "version": "04d42d9d",
     "files": [
       {
         "path": "core.py",
         "url": "launcher/core.py",
-        "sha256": "0da6ad5e22e052110371a2fffde424df8a0d21984f4aa14f35ee68421e97a081"
+        "sha256": "5d2c3d33666d17c380f8e110684085b78a6f7b282bc407ab5b8ee4ecfd4cf729"
       },
       {
         "path": "ui.py",

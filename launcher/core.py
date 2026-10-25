@@ -214,8 +214,23 @@ def mod_status(mod, folder):
         else:
             up_to_date = False
     if present == 0:
-        return "missing"
+        # the old mods this one replaces are still active: offer it as their update
+        return "update" if replaced_files(mod, folder) else "missing"
     return "installed" if up_to_date else "update"
+
+
+def replaced_files(mod, folder):
+    """Active files of older mods this mod replaces (e.g. three scripts merged into one)."""
+    paths = [os.path.join(folder, safe_relpath(rel)) for rel in mod.get("replaces", [])]
+    return [p for p in paths if os.path.exists(p)]
+
+
+def remove_replaced(mod, folder):
+    for rel in mod.get("replaces", []):
+        target = os.path.join(folder, safe_relpath(rel))
+        for path in (target, target + ".disabled"):
+            if os.path.exists(path):
+                os.remove(path)
 
 
 # ---------------------------------------------------------------- network (player side)
@@ -239,6 +254,10 @@ def check_manifest(manifest):
             safe_relpath(str(entry.get("path", "")))
             if not re.match(r"^[0-9a-f]{64}$", str(entry.get("sha256", ""))):
                 raise ValueError("bad checksum in %s" % mod["id"])
+        if not isinstance(mod.get("replaces", []), list):
+            raise ValueError("bad replaces list in %s" % mod["id"])
+        for rel in mod.get("replaces", []):
+            safe_relpath(str(rel))
     for entry in launcher_entries(manifest):
         safe_launcher_path(str(entry.get("path", "")))
         if not re.match(r"^[0-9a-f]{64}$", str(entry.get("sha256", ""))):
@@ -276,6 +295,8 @@ def install_mod(mod, folder, manifest_url, progress=lambda done, total: None):
         with os.fdopen(handle, "wb") as f:
             f.write(data)
         os.replace(temp_path, target)
+    # only once the new files are in place, so a failed download never leaves the player with nothing
+    remove_replaced(mod, folder)
     progress(len(files), len(files))
 
 
@@ -285,6 +306,7 @@ def uninstall_mod(mod, folder):
         for path in (target, target + ".disabled"):
             if os.path.exists(path):
                 os.remove(path)
+    remove_replaced(mod, folder)
 
 
 # ---------------------------------------------------------------- launcher self-update
@@ -448,9 +470,13 @@ def build_depot(state):
                 shutil.copyfile(source, target)
                 entries.append({"path": rel, "url": url, "sha256": sha256_of(source)})
             fingerprint = hashlib.sha256("".join(e["path"] + e["sha256"] for e in entries).encode()).hexdigest()
-            mods.append({"id": mod_id, "client": client["id"], "title": info.get("title", mod_id),
-                         "description": info.get("description", ""), "version": fingerprint[:8],
-                         "files": entries})
+            mod = {"id": mod_id, "client": client["id"], "title": info.get("title", mod_id),
+                   "description": info.get("description", ""), "version": fingerprint[:8], "files": entries}
+            if info.get("replaces"):
+                for rel in info["replaces"]:
+                    safe_relpath(rel)
+                mod["replaces"] = list(info["replaces"])
+            mods.append(mod)
 
     # the player launcher itself, so players get interface changes without a new zip
     launcher = []
