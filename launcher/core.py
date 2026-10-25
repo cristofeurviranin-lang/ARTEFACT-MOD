@@ -34,7 +34,7 @@ PLAYER_FILES = ["core.py", "ui.py", "joueur.pyw"]
 
 # files a mod may contain: scripts and data only, never programs
 ALLOWED_EXTENSIONS = {
-    ".gsc", ".gsh", ".gscbin", ".csc", ".lua", ".luac", ".json", ".csv", ".txt", ".cfg", ".ini",
+    ".gsc", ".gsh", ".gscbin", ".gscc", ".csc", ".lua", ".luac", ".json", ".csv", ".txt", ".cfg", ".ini",
     ".str", ".ff", ".pak", ".xml", ".png", ".jpg", ".dds", ".wav", ".ogg", ".bik",
 }
 SAFE_PART = re.compile(r"^[A-Za-z0-9_\-. ]+$")

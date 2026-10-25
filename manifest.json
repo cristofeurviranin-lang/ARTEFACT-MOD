@@ -1,7 +1,15 @@
 {
   "format": 2,
-  "version": "823f2b5d",
-  "clients": [],
+  "version": "e7590c25",
+  "clients": [
+    {
+      "pick": "game",
+      "marker": "cod23-cod.exe",
+      "folder_hint": "your Modern Warfare III game folder (the one with cod23-cod.exe)",
+      "id": "lumen",
+      "mods_subdir": ""
+    }
+  ],
   "mods": [
     {
       "id": "br95_better_bot",
@@ -21,15 +29,98 @@
         "BotLoot.gsc",
         "Bots.gsc"
       ]
+    },
+    {
+      "id": "br95_mp_level",
+      "client": "lumen",
+      "title": "MP LEVEL V1 BR95",
+      "description": "Level 1 to 1000 for multiplayer with a new colour every 100 levels, live HUD and result screen, 40-day seasons, WORLD RANKING and MP SHOP. The shop needs the progression mod by @swatcookie. For the world ranking to send your score, also copy BR95Sync.exe from the mod's zip into jupiter/BR95 (the launcher cannot install programs).",
+      "version": "a86c9e0e",
+      "files": [
+        {
+          "path": "jupiter/Assets/Lua/br95_level_hud_post.lua",
+          "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_level_hud_post.lua",
+          "sha256": "a53778cd13294e5d41f41267b167aaef4d53554eb98b8a434e42f3048486dc35"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_level_post.lua",
+          "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_level_post.lua",
+          "sha256": "d054cd1d9b33bca9d9b4e03b2042aee98fb54a2472a2ffd1217a12e2c4c071f8"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_main_post.lua",
+          "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_main_post.lua",
+          "sha256": "702e8a2c010b4cf9f2ff464a504a37e167051b84e07c5e991166e06f75680eb6"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_mpshop_post.lua",
+          "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_mpshop_post.lua",
+          "sha256": "dc16e0b28dcd9cd0ce1c0ecd6dd2989d86e09ee0e871bcaa4f93de4c3ad41869"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_core_post.lua",
+          "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_ranked_core_post.lua",
+          "sha256": "621e3b79fe02c49f1da4c82a8ad0a5e3f208eb59a26995c5e3ae00cac582afd6"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_sync_start_post.lua",
+          "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_sync_start_post.lua",
+          "sha256": "82746fd3090d8711462c4a6d869dad6833d5d93f08f85c1b5cc1a8273c905d51"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_world_real_post.lua",
+          "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_world_real_post.lua",
+          "sha256": "1ad65e266bc9e5fe3e7bfe16d7859b7b24890b89102276743be7db77555f6129"
+        },
+        {
+          "path": "jupiter/Assets/Scripts/Custom/mp/br95_mp_ranked.gscc",
+          "url": "mods/lumen/br95_mp_level/jupiter/Assets/Scripts/Custom/mp/br95_mp_ranked.gscc",
+          "sha256": "cbe3915eae181de81f5bf0ea49a7e223a0bf816237eea3d1f1fa4344559aa52c"
+        },
+        {
+          "path": "jupiter/BR95/BR95Sync.cfg",
+          "url": "mods/lumen/br95_mp_level/jupiter/BR95/BR95Sync.cfg",
+          "sha256": "384be6d6d7a4ba56da1ab7072fb8be7850571057ec1a29d6c211564209092dfc"
+        },
+        {
+          "path": "jupiter/IO/br95_info.txt",
+          "url": "mods/lumen/br95_mp_level/jupiter/IO/br95_info.txt",
+          "sha256": "8a700479f54e931cc7f7543e2fcbaf97f3146ebdc4800fe36d00249c4e8552af"
+        }
+      ]
+    },
+    {
+      "id": "br95_ranked_v1",
+      "client": "lumen",
+      "title": "BR95 RANKED V1 (Warzone)",
+      "description": "Offline ranked mode for Warzone: ranks from Bronze to Painite, SR, in-match HUD, result screen and seasons.",
+      "version": "20a37381",
+      "files": [
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_hud_post.lua",
+          "sha256": "eaf84922a88fb8afe1345121f77bcc1a4d430dcdc1859f3b7dcfc70b6ae8ba94"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
+          "sha256": "973831af8b4bafa55f62606ea21669d0e9b3516ccb385314e2cabbf1623d548c"
+        },
+        {
+          "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
+          "sha256": "a693700331bf8c34b1719a734ae8065e6fcc96e9214a0ac0ecf589cee4f11fa1"
+        }
+      ]
     }
   ],
   "launcher": {
-    "version": "04d42d9d",
+    "version": "61c6acc7",
     "files": [
       {
         "path": "core.py",
         "url": "launcher/core.py",
-        "sha256": "5d2c3d33666d17c380f8e110684085b78a6f7b282bc407ab5b8ee4ecfd4cf729"
+        "sha256": "e344764036cab6c7d7114def735f7ec4dc74f3adbd649ec8252f4e41f3c31213"
       },
       {
         "path": "ui.py",

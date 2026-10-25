@@ -1,0 +1,1 @@
+MP LEVEL V1 BR95 saves its data in this folder (br95_*.txt). Delete the br95_*.txt files to reset your progress.
