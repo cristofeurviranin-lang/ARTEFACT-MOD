@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "e7590c25",
+  "version": "856d1679",
   "clients": [
     {
       "pick": "game",
@@ -35,7 +35,7 @@
       "client": "lumen",
       "title": "MP LEVEL V1 BR95",
       "description": "Level 1 to 1000 for multiplayer with a new colour every 100 levels, live HUD and result screen, 40-day seasons, WORLD RANKING and MP SHOP. The shop needs the progression mod by @swatcookie. For the world ranking to send your score, also copy BR95Sync.exe from the mod's zip into jupiter/BR95 (the launcher cannot install programs).",
-      "version": "a86c9e0e",
+      "version": "932dbb46",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_level_hud_post.lua",
@@ -55,7 +55,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_mpshop_post.lua",
           "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_mpshop_post.lua",
-          "sha256": "dc16e0b28dcd9cd0ce1c0ecd6dd2989d86e09ee0e871bcaa4f93de4c3ad41869"
+          "sha256": "ca945604bde4da26ba1da030787ffe339fbfa696d95287fe61016c22ac7c309a"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_core_post.lua",

@@ -343,6 +343,18 @@ local function exactRandom(bridge, id)
     end
 end
 
+local LP_STATE_FILE = "jupiter/IO/br95_lp_state.txt"      -- BR95LP|0|END = progression mod off (read at game start)
+-- the switch only works when the two loader files of the progression mod carry the BR95 check
+local function lpPatched()
+    local text = readText("jupiter/Assets/Lua/ui/generated/widgets/frontend/mp/cas/weaponlevelbar.lua")
+    return text ~= nil and text:find("LP_OFF", 1, true) ~= nil
+end
+
+local function lpEnabled()
+    local text = readText(LP_STATE_FILE)
+    return not (text and text:match("^BR95LP|0"))
+end
+
 -- ------------------------------------------------------------------
 -- items of the current 4-hour window: 6 items, chosen once among items not owned
 -- yet and saved, so everybody who opens the shop in that window sees the same ones
@@ -777,9 +789,27 @@ local function build(menu, controller)
     end
 
     -- last result bar
-    box(PANEL, 1, -770, 770, 800, 850)
+    local withSwitch = lpPatched()
+    local barRight = withSwitch and 390 or 770
+    box(PANEL, 1, -770, barRight, 800, 850)
     local resultTitle = text("LAST PURCHASE", 14, GREY, -750, 0, 803, 823, LEFT)
-    local resultText = text("BUY SOMETHING TO SEE WHAT YOU GET HERE.", 21, WHITE, -750, 750, 822, 848, LEFT, true)
+    local resultText = text("BUY SOMETHING TO SEE WHAT YOU GET HERE.", 21, WHITE, -750, barRight - 20, 822, 848, LEFT, true)
+
+    -- switch of the progression mod (the mod by @swatcookie): off = the mod is simply not loaded
+    -- at the next start, nothing is deleted, the saves stay in jupiter/IO/local_*
+    local lpText
+    if withSwitch then
+        box(PANEL, 1, 410, 770, 800, 850)
+        box(GOLD, 1, 410, 416, 800, 850)
+        button(424, 764, 804, 846, "", function()
+            local on = lpEnabled()
+            writeText(LP_STATE_FILE, "BR95LP|" .. (on and "0" or "1") .. "|END")
+            if on then state.result("PROGRESSION MOD", "TURNED OFF. RESTART THE GAME. YOUR PROGRESSION IS KEPT.", GOLD)
+            else state.result("PROGRESSION MOD", "TURNED ON. RESTART THE GAME.", GOLD) end
+            refreshAll()
+        end)
+        lpText = text("", 15, WHITE, 424, 764, 811, 839, CENTER, true)
+    end
 
     -- always available
     local function simpleCard(l, r, name, info)
@@ -953,6 +983,15 @@ local function build(menu, controller)
     -- ===================================================================
     refreshAll = function()
         setText(rpText, tostring(readRP()) .. " RP")
+        do
+            local on, loaded = lpEnabled(), caseBridge() ~= nil
+            local label
+            if on and loaded then label = "PROGRESSION MOD: ON  -  CLICK TO TURN OFF"
+            elseif (not on) and (not loaded) then label = "PROGRESSION MOD: OFF  -  CLICK TO TURN ON"
+            elseif not on then label = "OFF AFTER RESTART  -  CLICK TO CANCEL"
+            else label = "ON AFTER RESTART  -  CLICK TO CANCEL" end
+            setText(lpText, label, on and WHITE or GOLD)
+        end
         setText(packTimer, "NEW PACKS IN " .. clock(86400 - now() % 86400))
         setText(itemTimer, "NEW ITEMS IN " .. clock(ITEM_REFRESH - now() % ITEM_REFRESH))
         for slot, card in ipairs(packCards) do
@@ -982,7 +1021,7 @@ local function build(menu, controller)
             else
                 card.id = 0
                 setText(card.rarity, "")
-                setText(card.name, "LOADING...", GREY)
+                setText(card.name, lpEnabled() and "LOADING..." or "PROGRESSION MOD OFF", GREY)
                 setText(card.price, "")
                 setPicture(card.image, nil)
                 setText(card.btnText, "-")
