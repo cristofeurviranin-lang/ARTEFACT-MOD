@@ -61,6 +61,7 @@ class PlayerApp:
         root.after(100, self.check_updates)
         if splash:
             ui.Splash(root, self.fonts, on_done=lambda: self.show(self.page))
+            self.play_intro_sound()
 
     # ------------------------------------------------------------ data helpers
 
@@ -306,6 +307,11 @@ class PlayerApp:
                  font=self.fonts.body, anchor="w").pack(side="left", fill="x", expand=True)
         row = tk.Frame(box, bg=ui.PANEL)
         row.pack(fill="x", pady=(14, 0))
+        ui.Switch(row, self.state.get("sound", True), self.set_sound).pack(side="right")
+        tk.Label(row, text="Play the intro sound when the launcher opens", bg=ui.PANEL, fg=ui.TEXT,
+                 font=self.fonts.body, anchor="w").pack(side="left", fill="x", expand=True)
+        row = tk.Frame(box, bg=ui.PANEL)
+        row.pack(fill="x", pady=(14, 0))
         self.check_button = ui.Button(row, "Check for updates", self.check_updates, self.fonts.button, height=34,
                                       kind="secondary", width=160)
         self.check_button.set_enabled(not self.busy)
@@ -346,6 +352,24 @@ class PlayerApp:
         self.state["auto_update"] = value
         core.save_state(self.state)
         self.status.set("ok", "Automatic updates %s." % ("on" if value else "off"))
+
+    def set_sound(self, value):
+        self.state["sound"] = value
+        core.save_state(self.state)
+        self.status.set("ok", "Intro sound %s." % ("on" if value else "off"))
+        if value:
+            self.play_intro_sound()
+
+    def play_intro_sound(self):
+        """Plays assets/startup.wav without blocking; silently skipped if it's missing or there's no audio."""
+        path = os.path.join(core.HERE, "assets", "startup.wav")
+        if not self.state.get("sound", True) or not os.path.isfile(path):
+            return
+        try:
+            import winsound
+            winsound.PlaySound(path, winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_NODEFAULT)
+        except (ImportError, RuntimeError):
+            pass
 
     def choose_folder(self, client):
         path = filedialog.askdirectory(parent=self.root, title="Choose %s" % client["folder_hint"])

@@ -230,7 +230,7 @@ def check_manifest(manifest):
             safe_relpath(str(entry.get("path", "")))
             if not re.match(r"^[0-9a-f]{64}$", str(entry.get("sha256", ""))):
                 raise ValueError("bad checksum in %s" % mod["id"])
-    for entry in manifest.get("launcher", {}).get("files", []):
+    for entry in launcher_entries(manifest):
         safe_launcher_path(str(entry.get("path", "")))
         if not re.match(r"^[0-9a-f]{64}$", str(entry.get("sha256", ""))):
             raise ValueError("bad checksum in launcher files")
@@ -280,9 +280,12 @@ def uninstall_mod(mod, folder):
 
 # ---------------------------------------------------------------- launcher self-update
 
+ASSET_NAME = re.compile(r"^[A-Za-z0-9_\-]+\.(png|wav)$")
+
+
 def safe_launcher_path(path):
-    """Only the player launcher's own files may be replaced: its three scripts and its PNG artwork."""
-    if path in PLAYER_FILES or re.match(r"^assets/[A-Za-z0-9_\-]+\.png$", path):
+    """Only the player launcher's own files may be replaced: its three scripts, its artwork and sounds."""
+    if path in PLAYER_FILES or (path.startswith("assets/") and ASSET_NAME.match(path[len("assets/"):])):
         return os.path.join(*path.split("/"))
     raise ValueError("unexpected launcher file: %r" % path)
 
@@ -292,8 +295,14 @@ def launcher_files():
     files = list(PLAYER_FILES)
     assets = os.path.join(HERE, "assets")
     if os.path.isdir(assets):
-        files += ["assets/" + n for n in sorted(os.listdir(assets)) if re.match(r"^[A-Za-z0-9_\-]+\.png$", n)]
+        files += ["assets/" + n for n in sorted(os.listdir(assets)) if ASSET_NAME.match(n)]
     return files
+
+
+def launcher_entries(manifest):
+    # "media" holds files the first launcher version (PNG only) would reject; it never reads that key
+    launcher = manifest.get("launcher", {})
+    return launcher.get("files", []) + launcher.get("media", [])
 
 
 def is_admin_install():
@@ -309,7 +318,7 @@ def update_launcher(manifest, manifest_url):
     if is_admin_install():
         return []
     downloads = []
-    for entry in manifest.get("launcher", {}).get("files", []):
+    for entry in launcher_entries(manifest):
         target = os.path.join(HERE, safe_launcher_path(entry["path"]))
         if os.path.exists(target) and sha256_of(target) == entry["sha256"]:
             continue
@@ -446,11 +455,13 @@ def build_depot(state):
         shutil.copyfile(source, target)
         launcher.append({"path": rel, "url": "launcher/" + rel, "sha256": sha256_of(source)})
     launcher_version = hashlib.sha256("".join(e["path"] + e["sha256"] for e in launcher).encode()).hexdigest()[:8]
+    media = [e for e in launcher if not e["path"].endswith(".png") and e["path"].startswith("assets/")]
+    files = [e for e in launcher if e not in media]
 
     fingerprint = hashlib.sha256(("".join(m["client"] + m["id"] + m["version"] for m in mods) +
                                   launcher_version).encode()).hexdigest()
     manifest = {"format": 2, "version": fingerprint[:8], "clients": load_custom_clients(), "mods": mods,
-                "launcher": {"version": launcher_version, "files": launcher}}
+                "launcher": {"version": launcher_version, "files": files, "media": media}}
     write_json(os.path.join(DEPOT, "manifest.json"), manifest)
     return manifest
 

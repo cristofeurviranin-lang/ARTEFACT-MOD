@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "6d80338e",
+  "version": "e792f998",
   "clients": [],
   "mods": [
     {
@@ -47,12 +47,12 @@
     }
   ],
   "launcher": {
-    "version": "d6d407bd",
+    "version": "540ab578",
     "files": [
       {
         "path": "core.py",
         "url": "launcher/core.py",
-        "sha256": "b2e081934fc057907c4f4e2426f2350cde4ce526673501812da447a9ffb88ad1"
+        "sha256": "cefc859361973a2d60a1fe82b3077d1d0f92d39e54c7c51c09b2daae4ba39d52"
       },
       {
         "path": "ui.py",
@@ -62,7 +62,7 @@
       {
         "path": "joueur.pyw",
         "url": "launcher/joueur.pyw",
-        "sha256": "615a0fc8c08bc80bd3fcfa11f82c0b5f25419f33122ac1757fcc35e2423bf7f5"
+        "sha256": "c0a08cbc7a8a711a2faebd5a64679d518283f7de391037cd4a953284a3559a52"
       },
       {
         "path": "assets/bo7_banner.png",
@@ -103,6 +103,13 @@
         "path": "assets/lumen_thumb.png",
         "url": "launcher/assets/lumen_thumb.png",
         "sha256": "cacdfdc7094ddc1a32946efb8180bb08fa3d17b183c17569602491f287183dc9"
+      }
+    ],
+    "media": [
+      {
+        "path": "assets/startup.wav",
+        "url": "launcher/assets/startup.wav",
+        "sha256": "f3c64e1c50ff276ac949b17d6c0ed1323d35f6954bc4c97583989b7d52877a5b"
       }
     ]
   }
