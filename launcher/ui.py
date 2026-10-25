@@ -1,5 +1,6 @@
 """ARTEFACT theme: dark palette, animated widgets and transitions (plain tkinter, no extra install)."""
 
+import functools
 import math
 import os
 import time
@@ -32,6 +33,7 @@ ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
 # ---------------------------------------------------------------- colours
 
+@functools.lru_cache(maxsize=256)
 def hex_rgb(color):
     color = color.lstrip("#")
     return tuple(int(color[i:i + 2], 16) for i in (0, 2, 4))
@@ -39,9 +41,15 @@ def hex_rgb(color):
 
 def mix(a, b, t):
     """Blend two #rrggbb colours, t=0 gives a, t=1 gives b."""
+    # 64 steps are invisible to the eye and let the result be cached
+    return _mix(a, b, round(max(0.0, min(1.0, t)) * 64))
+
+
+@functools.lru_cache(maxsize=4096)
+def _mix(a, b, step):
     ra, ga, ba = hex_rgb(a)
     rb, gb, bb = hex_rgb(b)
-    t = max(0.0, min(1.0, t))
+    t = step / 64
     return "#%02x%02x%02x" % (round(ra + (rb - ra) * t), round(ga + (gb - ga) * t), round(ba + (bb - ba) * t))
 
 
@@ -138,25 +146,25 @@ def hover_glow(outer, color):
         widget.bind("<Leave>", leave, add="+")
 
 
-def reveal(items, delay=0, step=60, rise=18):
-    """Packs widgets one after another, each sliding up into place. items: [(widget, pack kwargs)]."""
-    for index, (widget, options) in enumerate(items):
-        top, bottom = options.get("pady", (0, 0))
+def reveal(items, delay=0, step=55):
+    """Packs widgets one after another. items: [(widget, pack kwargs)].
 
-        def show(widget=widget, options=options, top=top, bottom=bottom):
+    Each widget appears once; nothing is re-laid out frame by frame (that's what made pages lag).
+    """
+    for index, (widget, options) in enumerate(items):
+        def show(widget=widget, options=options):
             try:
-                widget.pack(**dict(options, pady=(top + rise, bottom)))
-                tween(widget, 280, lambda t: widget.pack_configure(pady=(top + rise * (1 - t), bottom)))
+                widget.pack(**options)
             except tk.TclError:
                 pass
 
         widget.after(delay + index * step, show)
 
 
-def slide_in(frame, distance=36, duration=320):
-    """Places a page frame in its parent and slides it in from the right."""
-    frame.place(x=distance, y=0, relwidth=1, relheight=1)
-    tween(frame, duration, lambda t: frame.place_configure(x=round(distance * (1 - t))))
+def slide_in(frame):
+    """Places a page frame in its parent. The banner carries the motion: moving a whole page of native
+    widgets every frame is expensive on Windows."""
+    frame.place(x=0, y=0, relwidth=1, relheight=1)
 
 
 # ---------------------------------------------------------------- fonts and window
@@ -203,15 +211,27 @@ def setup_window(root, title, width, height, min_width=None, min_height=None):
     return Fonts(root)
 
 
+_images = {}
+_fonts = {}
+
+
 def load_image(name):
-    """PhotoImage from assets/, or None when the file is missing."""
-    path = os.path.join(ASSETS, name)
-    if not os.path.isfile(path):
-        return None
-    try:
-        return tk.PhotoImage(file=path)
-    except tk.TclError:
-        return None
+    """PhotoImage from assets/ (decoded once per window, then reused), or None when the file is missing."""
+    key = (id(tk._default_root), name)  # an image belongs to the Tk window that created it
+    if key not in _images:
+        path = os.path.join(ASSETS, name)
+        try:
+            _images[key] = tk.PhotoImage(file=path) if os.path.isfile(path) else None
+        except tk.TclError:
+            _images[key] = None
+    return _images[key]
+
+
+def text_width(font, text):
+    key = (id(tk._default_root), font)
+    if key not in _fonts:
+        _fonts[key] = tkfont.Font(font=font)
+    return _fonts[key].measure(text)
 
 
 # ---------------------------------------------------------------- drawing helpers
@@ -225,8 +245,13 @@ def short_path(path, limit=78):
 
 
 def wrap_label(label):
-    """Makes a label re-wrap its text to its own width."""
-    label.bind("<Configure>", lambda e: label.configure(wraplength=max(e.width - 4, 60)), add="+")
+    """Makes a label re-wrap its text to its own width (only when the width really changes)."""
+    def rewrap(event):
+        width = max(event.width - 4, 60)
+        if abs(int(label.cget("wraplength") or 0) - width) > 2:
+            label.configure(wraplength=width)
+
+    label.bind("<Configure>", rewrap, add="+")
     return label
 
 
@@ -241,21 +266,32 @@ def rounded_rect(canvas, x1, y1, x2, y2, radius, **kwargs):
 
 
 def gradient_rounded(canvas, x1, y1, x2, y2, radius, c1, c2=None, upto=None):
-    """Rounded shape filled column by column (left c1 to right c2); upto clips it at that x."""
+    """Rounded shape filled left c1 to right c2; upto clips it at that x.
+
+    The straight middle is drawn in wide bands and only the rounded ends pixel by pixel,
+    so a button is a few dozen canvas items instead of hundreds.
+    """
     width = int(x2 - x1)
-    r = min(radius, width / 2, (y2 - y1) / 2)
-    for i in range(width):
+    r = int(min(radius, width / 2, (y2 - y1) / 2))
+    limit = x2 if upto is None else min(x2, upto)
+
+    def color_at(i):
+        return mix(c1, c2, i / max(width - 1, 1)) if c2 else c1
+
+    for i in list(range(r)) + list(range(width - r, width)):
         x = x1 + i
-        if upto is not None and x > upto:
+        if x > limit:
+            continue
+        edge = r - i if i < r else i - (width - r)
+        dy = r - math.sqrt(max(r * r - edge * edge, 0))
+        canvas.create_line(x, y1 + dy, x, y2 - dy, fill=color_at(i))
+    band = 6 if c2 else max(width - 2 * r, 1)
+    for i in range(r, width - r, band):
+        x = x1 + i
+        if x > limit:
             break
-        if i < r:
-            dy = r - math.sqrt(max(r * r - (r - i) ** 2, 0))
-        elif i > width - r:
-            dy = r - math.sqrt(max(r * r - (i - (width - r)) ** 2, 0))
-        else:
-            dy = 0
-        color = mix(c1, c2, i / max(width - 1, 1)) if c2 else c1
-        canvas.create_line(x, y1 + dy, x, y2 - dy, fill=color)
+        right = min(x1 + min(i + band, width - r), limit)
+        canvas.create_rectangle(x, y1, right, y2, fill=color_at(i + band / 2), outline="")
 
 
 # ---------------------------------------------------------------- widgets
@@ -403,26 +439,37 @@ class StatusLine(tk.Frame):
         self.kind = "ok"
         self.phase = 0.0
         self.timer = None
-        self.bind("<Destroy>", lambda e: self.timer and self.after_cancel(self.timer))
-        self._pulse()
+        self.halo = self.dot.create_oval(7, 7, 7, 7, fill=BG, outline="")
+        self.core = self.dot.create_oval(3, 3, 11, 11, fill=GREEN, outline="")
+        self.bind("<Destroy>", lambda e: self._stop())
+
+    def _stop(self):
+        if self.timer:
+            self.after_cancel(self.timer)
+            self.timer = None
 
     def _pulse(self):
+        """Only runs while busy; the dot is static the rest of the time."""
         try:
-            self.dot.delete("all")
-            color = self.COLORS[self.kind]
-            if self.kind == "busy":
-                self.phase = (self.phase + 0.08) % (2 * math.pi)
-                halo = (math.sin(self.phase) + 1) / 2
-                r = 4 + 3 * halo
-                self.dot.create_oval(7 - r, 7 - r, 7 + r, 7 + r, fill=mix(BG, color, 0.35), outline="")
-            self.dot.create_oval(3, 3, 11, 11, fill=color, outline="")
-            self.timer = self.after(30 if self.kind == "busy" else 250, self._pulse)
+            self.phase = (self.phase + 0.12) % (2 * math.pi)
+            r = 4 + 3 * (math.sin(self.phase) + 1) / 2
+            self.dot.coords(self.halo, 7 - r, 7 - r, 7 + r, 7 + r)
+            self.timer = self.after(40, self._pulse)
         except tk.TclError:
             pass
 
     def set(self, kind, text):
         self.kind = kind
-        self.label.configure(text=text, fg=TEXT if kind in ("ok", "busy") else self.COLORS[kind])
+        color = self.COLORS[kind]
+        self.dot.itemconfigure(self.core, fill=color)
+        self.label.configure(text=text, fg=TEXT if kind in ("ok", "busy") else color)
+        if kind == "busy":
+            self.dot.itemconfigure(self.halo, fill=mix(BG, color, 0.35))
+            if not self.timer:
+                self._pulse()
+        else:
+            self._stop()
+            self.dot.coords(self.halo, 7, 7, 7, 7)
 
 
 def chip(parent, text, color, fonts):
@@ -496,6 +543,8 @@ class NavItem(tk.Frame):
 class Banner(tk.Canvas):
     """Client artwork across the top of a page, with its name; slides and fades in when played."""
 
+    SEGMENTS = 10  # the accent line under the name, drawn as a few coloured pieces
+
     def __init__(self, parent, fonts, client, subtitle, pill=None, height=230):
         super().__init__(parent, height=height, bg=BG, highlightthickness=0, bd=0)
         self.fonts = fonts
@@ -504,54 +553,78 @@ class Banner(tk.Canvas):
         self.pill = pill
         self.image = load_image("%s_banner.png" % client["id"])
         self.t = 1.0
-        self.bind("<Configure>", lambda e: self.draw())
+        self.size = None
+        self.bind("<Configure>", lambda e: self._build())
 
     def play(self):
         self.t = 0.0
-        tween(self, 700, self._step)
+        self._update()
+        tween(self, 650, self._step)
 
     def _step(self, t):
         self.t = t
-        self.draw()
+        self._update()
 
-    def draw(self):
-        self.delete("all")
+    def _build(self):
+        """Creates every item once for the current size; animation frames only move/recolour them."""
         w, h = self.winfo_width(), self.winfo_height()
-        if w < 10:
+        if w < 10 or (w, h) == self.size:
             return
-        t = self.t
+        self.size = (w, h)
+        self.delete("all")
         c1, c2 = client_colors(self.client)
         if self.image:
-            self.create_image(w / 2 + 40 * (1 - t), h / 2, image=self.image)
+            self.picture = self.create_image(w / 2, h / 2, image=self.image)
         else:
-            # no artwork: dim diagonal sweep in the client's colours
-            for i in range(0, w, 2):
-                color = mix(mix(c1, BG, 0.78), mix(c2 or c1, BG, 0.86), i / w)
-                self.create_line(i, 0, i, h, fill=color, width=2)
-            for y in range(h - 70, h, 2):
-                self.create_line(0, y, w, y, fill=mix(mix(c1, BG, 0.8), BG, (y - (h - 70)) / 70), width=2)
-
-        fade = min(1.0, t * 1.4)
-        x = 36 - 14 * (1 - t)
-        name_y = h - 92
-        self.create_text(x + 2, name_y + 2, text=self.client["name"].upper(), anchor="w", fill="#000000",
-                         font=self.fonts.hero)
-        self.create_text(x, name_y, text=self.client["name"].upper(), anchor="w", fill=mix(BG, "#ffffff", fade),
-                         font=self.fonts.hero)
-        line_w = 110 * ease_out(min(1.0, t * 1.2))
-        if c2:
-            gradient_rounded(self, x, name_y + 26, x + max(line_w, 2), name_y + 30, 2, c1, c2)
-        else:
-            self.create_rectangle(x, name_y + 26, x + line_w, name_y + 30, fill=c1, outline="")
-        self.create_text(x, name_y + 52, text=self.subtitle, anchor="w", fill=mix(BG, "#c9ced6", fade),
-                         font=self.fonts.body)
+            self.picture = None
+            # no artwork: dim sweep in the client's colours, in wide bands
+            for i in range(0, w, 12):
+                self.create_rectangle(i, 0, i + 12, h, outline="",
+                                      fill=mix(mix(c1, BG, 0.78), mix(c2 or c1, BG, 0.86), i / w))
+            for y in range(h - 70, h, 6):
+                self.create_rectangle(0, y, w, y + 6, outline="",
+                                      fill=mix(mix(c1, BG, 0.8), BG, (y - (h - 70)) / 70))
+        name = self.client["name"].upper()
+        self.shadow = self.create_text(0, 0, text=name, anchor="w", fill="#000000", font=self.fonts.hero)
+        self.name = self.create_text(0, 0, text=name, anchor="w", fill="#ffffff", font=self.fonts.hero)
+        self.line = [self.create_rectangle(0, 0, 0, 0, outline="",
+                                           fill=mix(c1, c2, i / (self.SEGMENTS - 1)) if c2 else c1)
+                     for i in range(self.SEGMENTS)]
+        self.sub = self.create_text(0, 0, text=self.subtitle, anchor="w", fill="#c9ced6", font=self.fonts.body)
+        self.pill_items = None
         if self.pill:
             font = self.fonts.badge
-            pill_w = tkfont.Font(font=font).measure(self.pill) + 22
+            pill_w = text_width(font, self.pill) + 22
             px, py = w - 28 - pill_w, 24
-            rounded_rect(self, px, py, px + pill_w, py + 26, 13, fill=mix(BG, c1, 0.25 * fade + 0.05),
-                         outline=mix(BG, c1, 0.6 * fade))
-            self.create_text(px + pill_w / 2, py + 13, text=self.pill, fill=mix(BG, "#ffffff", fade), font=font)
+            self.pill_items = (
+                rounded_rect(self, px, py, px + pill_w, py + 26, 13, fill=BG, outline=BG),
+                self.create_text(px + pill_w / 2, py + 13, text=self.pill, fill="#ffffff", font=font),
+            )
+        self._update()
+
+    def _update(self):
+        if self.size is None:
+            return
+        w, h = self.size
+        t = self.t
+        c1, _c2 = client_colors(self.client)
+        fade = min(1.0, t * 1.4)
+        # the artwork stays put: moving a 1000 px picture forces a full repaint on every frame
+        x = 36 - 14 * (1 - t)
+        name_y = h - 92
+        self.coords(self.shadow, x + 2, name_y + 2)
+        self.coords(self.name, x, name_y)
+        self.itemconfigure(self.name, fill=mix(BG, "#ffffff", fade))
+        length = 110 * ease_out(min(1.0, t * 1.2))
+        piece = length / self.SEGMENTS
+        for i, item in enumerate(self.line):
+            self.coords(item, x + piece * i, name_y + 26, x + piece * (i + 1) + 0.5, name_y + 30)
+        self.coords(self.sub, x, name_y + 52)
+        self.itemconfigure(self.sub, fill=mix(BG, "#c9ced6", fade))
+        if self.pill_items:
+            shape, label = self.pill_items
+            self.itemconfigure(shape, fill=mix(BG, c1, 0.25 * fade + 0.05), outline=mix(BG, c1, 0.6 * fade))
+            self.itemconfigure(label, fill=mix(BG, "#ffffff", fade))
 
 
 class Logo(tk.Canvas):
@@ -589,7 +662,7 @@ class Splash(tk.Canvas):
         word = "ARTEFACT"
         shown = word[:max(0, min(len(word), int(len(word) * min(1.0, t * 1.5)) + 1))]
         cx, cy = w / 2, h / 2 - 20
-        full = tkfont.Font(font=self.big).measure(word)
+        full = text_width(self.big, word)
         self.create_text(cx - full / 2, cy, text=shown, anchor="w", fill=TEXT, font=self.big)
         grow = ease_out(max(0.0, min(1.0, (t - 0.35) / 0.65)))
         half = full / 2 * grow

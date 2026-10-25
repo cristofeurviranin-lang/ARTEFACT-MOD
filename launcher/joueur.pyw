@@ -38,6 +38,9 @@ class PlayerApp:
         self.busy = False
         self.page = self.state.get("last_page", "iw8")
         self.page_frame = None
+        # pages already built stay alive and are just brought to the front; rerender() rebuilds them
+        self.pages = {}
+        self.banner = None
         self.action_buttons = []
         self.nav = {}
 
@@ -141,23 +144,33 @@ class PlayerApp:
         for key, item in self.nav.items():
             item.set_selected(key == page)
 
-        if self.page_frame is not None:
-            self.page_frame.destroy()
+        if page in self.pages:
+            frame, banner, buttons = self.pages[page]
+            frame.tkraise()
+            self.page_frame, self.action_buttons = frame, buttons
+            if animate and banner:
+                banner.play()
+            return
+
         self.page_frame = tk.Frame(self.main, bg=ui.BG)
         self.action_buttons = []
+        self.banner = None
         if page == "settings":
             reveal = self.build_settings(self.page_frame)
         else:
             reveal = self.build_client_page(self.page_frame, self.client(page), animate)
+        ui.slide_in(self.page_frame)
         if animate:
-            ui.slide_in(self.page_frame)
             ui.reveal(reveal, delay=120)
         else:
-            self.page_frame.place(x=0, y=0, relwidth=1, relheight=1)
             for widget, options in reveal:
                 widget.pack(**options)
+        self.pages[page] = (self.page_frame, self.banner, self.action_buttons)
 
     def rerender(self):
+        for frame, _banner, _buttons in self.pages.values():
+            frame.destroy()
+        self.pages = {}
         self.build_sidebar()
         self.show(self.page, animate=False)
 
@@ -172,6 +185,7 @@ class PlayerApp:
             pill = "%d / %d INSTALLED" % (self.installed_count(client), len(mods))
         banner = ui.Banner(frame, self.fonts, client, client["description"], pill)
         banner.pack(fill="x")
+        self.banner = banner
         if animate:
             banner.play()
 

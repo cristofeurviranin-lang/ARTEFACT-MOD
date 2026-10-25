@@ -181,12 +181,21 @@ def safe_relpath(path):
     return os.path.join(*parts)
 
 
+_hash_cache = {}
+
+
 def sha256_of(path):
-    digest = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    """File checksum, remembered until the file's size or modification time changes
+    (the launcher checks every mod's files each time a page is shown)."""
+    info = os.stat(path)
+    key = (os.path.abspath(path), info.st_size, info.st_mtime_ns)
+    if key not in _hash_cache:
+        digest = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                digest.update(chunk)
+        _hash_cache[key] = digest.hexdigest()
+    return _hash_cache[key]
 
 
 def mod_status(mod, folder):
