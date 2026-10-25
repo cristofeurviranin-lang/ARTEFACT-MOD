@@ -1,0 +1,2 @@
+# store every file byte for byte: the launcher checks each mod's sha256, so no line ending conversion
+* -text
