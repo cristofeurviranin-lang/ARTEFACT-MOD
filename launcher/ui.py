@@ -77,8 +77,11 @@ def ease_in_out(t):
     return 4 * t * t * t if t < 0.5 else 1 - (-2 * t + 2) ** 3 / 2
 
 
+FRAME_MS = 20  # 50 fps: as smooth to the eye as 60, a fifth less work
+
+
 def tween(widget, duration, step, done=None, ease=ease_out):
-    """Calls step(eased 0..1) about 60 times a second for duration ms; stops quietly if the widget dies."""
+    """Calls step(eased 0..1) 50 times a second for duration ms; stops quietly if the widget dies."""
     start = time.perf_counter()
     # timers live on the window, so a page destroyed mid-animation doesn't leave dangling Tcl callbacks
     clock = widget.winfo_toplevel()
@@ -90,7 +93,7 @@ def tween(widget, duration, step, done=None, ease=ease_out):
             t = min(1.0, (time.perf_counter() - start) * 1000 / duration)
             step(ease(t))
             if t < 1:
-                clock.after(15, tick)
+                clock.after(FRAME_MS, tick)
             elif done:
                 done()
         except tk.TclError:
@@ -169,12 +172,16 @@ def slide_in(frame):
 
 # ---------------------------------------------------------------- fonts and window
 
+def has_font(root, family):
+    """Asks for just this one font instead of listing every font installed (that list takes ~30 ms)."""
+    return tkfont.Font(root=root, family=family).actual("family").lower() == family.lower()
+
+
 class Fonts:
     def __init__(self, root):
-        families = set(tkfont.families(root))
-        display = "Bahnschrift" if "Bahnschrift" in families else "Segoe UI"
-        body = "Segoe UI" if "Segoe UI" in families else "TkDefaultFont"
-        semibold = "Segoe UI Semibold" if "Segoe UI Semibold" in families else body
+        display = "Bahnschrift" if has_font(root, "Bahnschrift") else "Segoe UI"
+        body = "Segoe UI" if has_font(root, "Segoe UI") else "TkDefaultFont"
+        semibold = "Segoe UI Semibold" if has_font(root, "Segoe UI Semibold") else body
         self.display = display
         self.logo = (display, 22, "bold")
         self.logo_sub = (display, 9, "bold")
@@ -654,23 +661,36 @@ class Splash(tk.Canvas):
         self.place(x=0, y=0, relwidth=1, relheight=1)
         self.tk.call("raise", self._w)  # Canvas.lift() raises canvas items, not the widget
         self.big = (fonts.display, 46, "bold")
+        self.size = None
         tween(self, 1100, self._intro, self._hold, ease=lambda t: t)
 
-    def _intro(self, t):
+    WORD = "ARTEFACT"
+    SEGMENTS = 12
+
+    def _build(self, w, h):
+        """Creates the items once; each frame only changes their text, position or colour."""
+        self.size = (w, h)
         self.delete("all")
+        self.full = text_width(self.big, self.WORD)
+        self.center = (w / 2, h / 2 - 20)
+        cx, cy = self.center
+        self.word = self.create_text(cx - self.full / 2, cy, text="", anchor="w", fill=TEXT, font=self.big)
+        self.sweep = [self.create_rectangle(0, 0, 0, 0, outline="", fill=mix(BRAND[0], BRAND[1], i / (self.SEGMENTS - 1)))
+                      for i in range(self.SEGMENTS)]
+        self.sub = self.create_text(cx, cy + 72, text="   ".join(self.subtitle), fill=BG, font=self.fonts.label)
+
+    def _intro(self, t):
         w, h = self.winfo_width(), self.winfo_height()
-        word = "ARTEFACT"
-        shown = word[:max(0, min(len(word), int(len(word) * min(1.0, t * 1.5)) + 1))]
-        cx, cy = w / 2, h / 2 - 20
-        full = text_width(self.big, word)
-        self.create_text(cx - full / 2, cy, text=shown, anchor="w", fill=TEXT, font=self.big)
-        grow = ease_out(max(0.0, min(1.0, (t - 0.35) / 0.65)))
-        half = full / 2 * grow
-        if half > 2:
-            gradient_rounded(self, cx - half, cy + 40, cx + half, cy + 44, 2, BRAND[0], BRAND[1])
-        sub_t = max(0.0, min(1.0, (t - 0.55) / 0.45))
-        self.create_text(cx, cy + 72, text="   ".join(self.subtitle), fill=mix(BG, MUTED, sub_t),
-                         font=self.fonts.label)
+        if (w, h) != self.size:
+            self._build(w, h)
+        letters = max(0, min(len(self.WORD), int(len(self.WORD) * min(1.0, t * 1.5)) + 1))
+        self.itemconfigure(self.word, text=self.WORD[:letters])
+        cx, cy = self.center
+        half = self.full / 2 * ease_out(max(0.0, min(1.0, (t - 0.35) / 0.65)))
+        piece = 2 * half / self.SEGMENTS
+        for i, item in enumerate(self.sweep):
+            self.coords(item, cx - half + piece * i, cy + 40, cx - half + piece * (i + 1) + 0.5, cy + 44)
+        self.itemconfigure(self.sub, fill=mix(BG, MUTED, max(0.0, min(1.0, (t - 0.55) / 0.45))))
 
     def _hold(self):
         self.after(250, lambda: tween(self, 420, self._leave, self._finish, ease=ease_in_out))

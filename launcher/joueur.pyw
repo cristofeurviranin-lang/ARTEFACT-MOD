@@ -404,6 +404,7 @@ class PlayerApp:
             return
         self.busy = True
         self.status.set("busy", busy_text)
+        self.button_states = [(other, other.enabled) for other in self.action_buttons]
         for other in self.action_buttons:
             if other is not button:
                 other.set_enabled(False)
@@ -412,18 +413,28 @@ class PlayerApp:
             button.set_progress(0.0)
 
         def worker():
+            # work() returns a message, or (message, changed) when it can tell nothing on screen changed
             try:
-                result = ("ok", work())
+                outcome = work()
+                message, changed = outcome if isinstance(outcome, tuple) else (outcome, True)
+                result = ("ok", message, changed)
             except Exception as error:
-                result = ("error", friendly_error(error))
+                result = ("error", friendly_error(error), False)
             self.root.after(0, self.finish, result)
 
         threading.Thread(target=worker, daemon=True).start()
 
     def finish(self, result):
+        kind, message, changed = result
         self.busy = False
-        self.rerender()
-        self.status.set(*result)
+        if changed:
+            self.rerender()
+        else:
+            # nothing to redraw: just give the buttons back their state
+            for button, enabled in self.button_states:
+                if button.winfo_exists():
+                    button.set_enabled(enabled)
+        self.status.set(kind, message)
 
     def progress_to(self, button):
         def callback(done, total):
@@ -455,7 +466,8 @@ class PlayerApp:
             # a new launcher comes first: it restarts, then handles the mods on its next start
             if core.update_launcher(manifest, url):
                 self.root.after(1400, self.restart)
-                return "New launcher version installed. Restarting..."
+                return "New launcher version installed. Restarting...", False
+            known = self.manifest.get("version")
             self.manifest = manifest
             self.state["manifest"] = manifest
             core.save_state(self.state)
@@ -469,9 +481,10 @@ class PlayerApp:
                         if core.mod_status(mod, folder) == "update":
                             core.install_mod(mod, folder, url)
                             updated.append(mod["title"])
+            changed = bool(updated) or manifest.get("version") != known
             if updated:
-                return "Updated: %s." % ", ".join(updated)
-            return "Everything is up to date."
+                return "Updated: %s." % ", ".join(updated), changed
+            return "Everything is up to date.", changed
         self.run_in_background(work, "Checking for updates...")
 
     def restart(self):

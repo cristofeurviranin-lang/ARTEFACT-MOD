@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "c5397afa",
+  "version": "d3ece312",
   "clients": [],
   "mods": [
     {
@@ -47,7 +47,7 @@
     }
   ],
   "launcher": {
-    "version": "f8b997dd",
+    "version": "45fbb7be",
     "files": [
       {
         "path": "core.py",
@@ -57,12 +57,12 @@
       {
         "path": "ui.py",
         "url": "launcher/ui.py",
-        "sha256": "fff6196cf62dfb3ce6bbe9fdef8e136d44151e0e6d29b0028ce9f0fd89739ca5"
+        "sha256": "36153a62fb169d290004e6714968fcfdff90af9e642344fca68a13469330bbb0"
       },
       {
         "path": "joueur.pyw",
         "url": "launcher/joueur.pyw",
-        "sha256": "56711335988ae7b7f065ba635c5944e2d57016fa051ea21dc1bbb764d698f609"
+        "sha256": "a768aa04fce01506f678134396e1f05a4b2726f85852dbf932a50f00cb9f6ea2"
       },
       {
         "path": "assets/bo7_banner.png",
