@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "e792f998",
+  "version": "1860ffd0",
   "clients": [],
   "mods": [
     {
@@ -47,7 +47,7 @@
     }
   ],
   "launcher": {
-    "version": "540ab578",
+    "version": "f51aff03",
     "files": [
       {
         "path": "core.py",
@@ -109,7 +109,7 @@
       {
         "path": "assets/startup.wav",
         "url": "launcher/assets/startup.wav",
-        "sha256": "f3c64e1c50ff276ac949b17d6c0ed1323d35f6954bc4c97583989b7d52877a5b"
+        "sha256": "7b3fa917dcc2da30d26de7b4b6d1afe8e1468a43604069ad6c5a62458fd1b80a"
       }
     ]
   }
