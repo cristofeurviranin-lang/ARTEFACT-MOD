@@ -1,13 +1,20 @@
 {
   "format": 2,
-  "version": "856d1679",
+  "version": "79a43b0e",
   "clients": [
     {
+      "id": "lumen",
       "pick": "game",
       "marker": "cod23-cod.exe",
+      "mods_subdir": "",
       "folder_hint": "your Modern Warfare III game folder (the one with cod23-cod.exe)",
-      "id": "lumen",
-      "mods_subdir": ""
+      "install_help": [
+        "Click Choose folder and pick your Modern Warfare III game folder (the one with cod23-cod.exe).",
+        "Click Install on the mods you want. Uninstall removes them again.",
+        "Start the game (restart it if it was open): mods only load when the game starts.",
+        "BR95 SMART BOTS: if you use jero_warzone_bots, remove it first, both drive the same bots.",
+        "MP LEVEL: the MP SHOP needs the progression mod by @swatcookie; for the world ranking also copy BR95Sync.exe from the MP LEVEL zip into jupiter\\BR95."
+      ]
     }
   ],
   "mods": [
@@ -35,7 +42,7 @@
       "client": "lumen",
       "title": "MP LEVEL V1 BR95",
       "description": "Level 1 to 1000 for multiplayer with a new colour every 100 levels, live HUD and result screen, 40-day seasons, WORLD RANKING and MP SHOP. The shop needs the progression mod by @swatcookie. For the world ranking to send your score, also copy BR95Sync.exe from the mod's zip into jupiter/BR95 (the launcher cannot install programs).",
-      "version": "932dbb46",
+      "version": "70805cb1",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_level_hud_post.lua",
@@ -75,7 +82,7 @@
         {
           "path": "jupiter/Assets/Scripts/Custom/mp/br95_mp_ranked.gscc",
           "url": "mods/lumen/br95_mp_level/jupiter/Assets/Scripts/Custom/mp/br95_mp_ranked.gscc",
-          "sha256": "cbe3915eae181de81f5bf0ea49a7e223a0bf816237eea3d1f1fa4344559aa52c"
+          "sha256": "85ef2e1f3442ff7c49ea6c4ba16dd0a3baf37d55dd20d8675aa73c74e199d017"
         },
         {
           "path": "jupiter/BR95/BR95Sync.cfg",
@@ -112,10 +119,24 @@
           "sha256": "a693700331bf8c34b1719a734ae8065e6fcc96e9214a0ac0ecf589cee4f11fa1"
         }
       ]
+    },
+    {
+      "id": "br95_smart_bots",
+      "client": "lumen",
+      "title": "BR95 SMART BOTS (Warzone)",
+      "description": "Strong Warzone bots: every enemy bot stays within 90 m of you, a wave of 3 bots on you every 30 s, every bot always has a target, instant reaction when shot, fast aim, slides and jumps in fights, infinite ammo with no reload, sprint, no spawning in walls, KO for more than 3 s = dead, the lobby never empties. Warzone only. Remove jero_warzone_bots first if you have it.",
+      "version": "54cd87a3",
+      "files": [
+        {
+          "path": "jupiter/Assets/Scripts/Custom/br/br95_smart_bots.gscc",
+          "url": "mods/lumen/br95_smart_bots/jupiter/Assets/Scripts/Custom/br/br95_smart_bots.gscc",
+          "sha256": "4af398bf5d4d1f69ae09354ac46eaa55e030d16faa049f6221bc642629e5b8c0"
+        }
+      ]
     }
   ],
   "launcher": {
-    "version": "61c6acc7",
+    "version": "fcd73011",
     "files": [
       {
         "path": "core.py",
@@ -130,7 +151,7 @@
       {
         "path": "joueur.pyw",
         "url": "launcher/joueur.pyw",
-        "sha256": "a768aa04fce01506f678134396e1f05a4b2726f85852dbf932a50f00cb9f6ea2"
+        "sha256": "4acd09c4b9e769fcd971efcd1761fc14ce98212d5b72d8bd1c4784cf25a8735b"
       },
       {
         "path": "assets/bo7_banner.png",

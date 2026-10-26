@@ -213,6 +213,17 @@ class PlayerApp:
                                    % client["folder_hint"], bg=ui.PANEL, fg=ui.TEXT, font=self.fonts.body,
                                    anchor="w", justify="left")).pack(side="left", fill="x", expand=True)
         items.append((outer, {"fill": "x", "pady": (0, 20)}))
+
+        # install guide of the client (manifest / admin clients.json: "install_help" = list of steps)
+        steps = client.get("install_help") or []
+        if steps:
+            outer, box = ui.card(content, padding=14)
+            tk.Label(box, text="How to install", bg=ui.PANEL, fg=ui.TEXT, font=self.fonts.h2, anchor="w").pack(fill="x")
+            for index, step in enumerate(steps, 1):
+                ui.wrap_label(tk.Label(box, text="%d.  %s" % (index, step), bg=ui.PANEL, fg=ui.MUTED,
+                                       font=self.fonts.body, anchor="w", justify="left")).pack(fill="x", pady=(4, 0))
+            items.append((outer, {"fill": "x", "pady": (0, 16)}))
+
         items.append((ui.section_label(content, "Available mods  (%d)" % len(mods), self.fonts),
                       {"fill": "x", "pady": (0, 10)}))
 
