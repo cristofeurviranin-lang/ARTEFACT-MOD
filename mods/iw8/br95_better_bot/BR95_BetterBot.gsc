@@ -19,7 +19,9 @@ init()
 //
 // settings:
 //   bai_enabled 1      turn the combat AI on/off
-//   bai_aggression 50  0-100, how readily bots push instead of falling back
+//   bai_aggression 80  0-100, how readily bots push instead of falling back
+//   bai_botdamage 15   % of damage a bot keeps when another bot shoots it (humans always take 100%)
+//   bai_hunt_range 250 metres within which a bot with nobody in sight goes after the nearest enemy
 //   bai_radius 90    bots farther than this many metres from every human are moved back around them
 //   bai_kill_ammo 60   reserve ammo added to every gun of a human who kills a bot
 //   bai_wave 1        periodic rush on a human player
@@ -31,7 +33,9 @@ botai_init()
     // forced on every load so the default is veteran whatever the commands section initialised it to
     setdvar( "botdifficulty", 3 );
     setdvarifuninitialized( "bai_enabled", 1 );
-    setdvarifuninitialized( "bai_aggression", 50 );
+    setdvarifuninitialized( "bai_aggression", 80 );
+    setdvarifuninitialized( "bai_botdamage", 15 );
+    setdvarifuninitialized( "bai_hunt_range", 250 );
     setdvarifuninitialized( "bai_radius", 90 );
     setdvarifuninitialized( "bai_kill_ammo", 60 );
     setdvarifuninitialized( "bai_wave", 1 );
@@ -329,6 +333,7 @@ start_ai()
     // run even with the combat AI off: the killer still gets ammo, the bot still holds a loaded gun
     self thread reward_killer();
     self thread bot_weapon_keeper();
+    self thread bot_damage_shield();
 
     if ( getdvarint( "bai_enabled", 1 ) == 0 )
         return;
@@ -478,11 +483,40 @@ keep_gun_ready()
         return;
     }
 
-    // bots fire non-stop and would run dry, then put their gun away
-    if ( self getweaponammoclip( current ) <= 2 )
-    {
+    // bots fire non-stop: keep their reserve full so they never run dry and put the gun away,
+    // and make them reload for real (with the animation) when the clip runs low
+    clip_size = weaponclipsize( current );
+
+    if ( self getweaponammostock( current ) < clip_size )
         self givemaxammo( current );
-        self setweaponammoclip( current, weaponclipsize( current ) );
+
+    if ( self getweaponammoclip( current ) <= int( clip_size * 0.15 ) )
+        self botpressbutton( "reload" );
+}
+
+// bots hurt each other very little so squads don't wipe in seconds; humans still take full damage
+bot_damage_shield()
+{
+    self endon( "disconnect" );
+    self endon( "death" );
+    self endon( "bai_stop" );
+    level endon( "game_ended" );
+
+    for (;;)
+    {
+        self waittill( "damage", amount, attacker );
+
+        if ( !isdefined( attacker ) || attacker == self || !isdefined( attacker.sessionstate ) || !isbot( attacker ) )
+            continue;
+
+        if ( !isalive( self ) || !isdefined( self.maxhealth ) )
+            continue;
+
+        kept = clamp_int( getdvarint( "bai_botdamage", 15 ), 0, 100 );
+        heal = int( amount * ( 100 - kept ) / 100 );
+
+        if ( heal > 0 )
+            self.health = clamp_int( self.health + heal, 1, self.maxhealth );
     }
 }
 
@@ -599,7 +633,6 @@ combat_loop()
     strafe_dir = 1;
     next_move = 0;
     retreat_until = 0;
-    lost_since = 0;
 
     // spread the scans so every bot doesn't trace on the same frame
     wait randomfloat( 0.3 );
@@ -626,42 +659,39 @@ combat_loop()
             self clear_goal();
         }
 
-        aggression = getdvarint( "bai_aggression", 50 );
+        if ( now < next_move )
+            continue;
 
+        // nobody in sight: hunt the nearest enemy instead of standing around
         if ( !isdefined( enemy ) )
         {
-            if ( self.bai_goal_active && lost_since == 0 )
-                lost_since = now;
+            next_move = now + 1500;
+            prey = self nearest_enemy( getdvarint( "bai_hunt_range", 250 ) * 39.37 );
 
-            if ( lost_since > 0 && now - lost_since > 2000 )
-            {
-                self clear_goal();
-                lost_since = 0;
-            }
+            if ( isdefined( prey ) )
+                self hunt( prey );
 
             continue;
         }
 
-        lost_since = 0;
+        aggression = getdvarint( "bai_aggression", 80 );
         dist = distance( self.origin, enemy.origin );
         hp = self health_fraction();
 
-        if ( hp < 0.4 && now > self.bai_next_retreat && randomint( 100 ) >= aggression )
+        if ( hp < 0.25 && now > self.bai_next_retreat && randomint( 100 ) >= aggression )
         {
             if ( self retreat_from( enemy ) )
             {
-                retreat_until = now + randomintrange( 2500, 4000 );
-                self.bai_next_retreat = now + 9000;
+                retreat_until = now + randomintrange( 2000, 3000 );
+                self.bai_next_retreat = now + 12000;
                 continue;
             }
         }
 
-        if ( now < next_move )
-            continue;
+        // always on the move: strafe up close, close the distance otherwise
+        next_move = now + randomintrange( 700, 1300 );
 
-        next_move = now + randomintrange( 1200, 2400 );
-
-        if ( dist < 700 )
+        if ( dist < 600 )
         {
             if ( randomint( 100 ) < 60 )
                 strafe_dir = strafe_dir * -1;
@@ -671,11 +701,46 @@ combat_loop()
             if ( dist < 300 && randomint( 100 ) < 12 )
                 self botpressbutton( "jump" );
         }
-        else if ( hp > 0.6 && randomint( 100 ) < aggression )
+        else
         {
             self push_toward( enemy );
         }
     }
+}
+
+nearest_enemy( max_dist )
+{
+    best = undefined;
+    best_sq = max_dist * max_dist;
+
+    foreach ( player in level.players )
+    {
+        if ( !self is_enemy( player ) )
+            continue;
+
+        d = distancesquared( self.origin, player.origin );
+
+        if ( d < best_sq )
+        {
+            best = player;
+            best_sq = d;
+        }
+    }
+
+    return best;
+}
+
+// sprint to where the prey is and tell the bot about it, so it engages as soon as it gets there
+hunt( prey )
+{
+    point = botgetclosestnavigablepoint( prey.origin, 400 );
+
+    if ( !isdefined( point ) )
+        return;
+
+    self botsetflag( "force_sprint", 1 );
+    self botgetimperfectenemyinfo( prey, prey.origin );
+    self set_goal( point, 200, "objective" );
 }
 
 damage_reaction()
@@ -1018,6 +1083,20 @@ bot_autofill()
     // anything typed with "set addbot N" in the menu is already in the match, so only the difference is added
     if ( needed > 0 )
         setdvar( "addbot", getdvarint( "addbot", 0 ) + needed );
+
+    // report how many really joined: the game may cap the match below what was asked
+    wait 15;
+
+    bots = 0;
+
+    foreach ( player in level.players )
+    {
+        if ( isdefined( player ) && isbot( player ) )
+            bots++;
+    }
+
+    iprintln( "^3BR95 BETTER BOT: " + bots + " bots in match (asked " + target + ") sv_maxclients "
+        + getdvarint( "sv_maxclients", 0 ) + " party_maxplayers " + getdvarint( "party_maxplayers", 0 ) );
 }
 
 monitoraddbot()

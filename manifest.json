@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "0e22f6c2",
+  "version": "173a9f7a",
   "clients": [
     {
       "id": "lumen",
@@ -20,13 +20,18 @@
       "id": "br95_better_bot",
       "client": "iw8",
       "title": "BR95 BETTER BOT",
-      "description": "The complete bot mod: 45 bots join every match on their own (bai_autofill), smarter armed bots, waves of 3 bots on you every 30 s, bots always within 90 m, ammo on every kill, loot drops, and the addbot / removebot / botdifficulty commands.",
-      "version": "3818a6d9",
+      "description": "The complete bot mod: 45 bots join every match on their own, armed bots that reload, hunt you down and never stand still, bots barely hurt each other so squads last, downed players die after 3 s, waves of 3 bots on you, bots within 90 m, ammo on every kill, loot drops, and the addbot / removebot / botdifficulty commands.",
+      "version": "4a6ac218",
       "files": [
         {
           "path": "BR95_BetterBot.gsc",
           "url": "mods/iw8/br95_better_bot/BR95_BetterBot.gsc",
-          "sha256": "4aa738db401684745df21dc7def63c251edd97aab8cbd3f994cce0bc16d40908"
+          "sha256": "935f9e8b1388d70fbf8c5fe04c78b47538876ee917f7552369c2d1fa903944b8"
+        },
+        {
+          "path": "BR95_BetterBot_KO.gsc",
+          "url": "mods/iw8/br95_better_bot/BR95_BetterBot_KO.gsc",
+          "sha256": "91c43456091ba8ba86b483f1687b375568e6e0ab242d9b061687109df3029180"
         }
       ],
       "replaces": [
