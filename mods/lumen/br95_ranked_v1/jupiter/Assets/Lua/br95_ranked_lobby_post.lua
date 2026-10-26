@@ -56,11 +56,11 @@ local function addCard(widget)
     end
     local function srLine(value, size, color, t)
         local str = tostring(value)
-        local w = math.floor(#str * size * 0.62)
+        local w = math.floor(#str * size * 0.72)
         local icon = size * 0.95
         local l = 150 - (w + icon + 8) / 2
         local _, ok = image(shared.SR_ICON, l, l + icon, t + size * 0.14, t + size * 0.14 + icon * 0.89)
-        text(str .. (ok and "" or " SR"), size, color, l + icon + 8, l + icon + 8 + w + 60, t, t + size + 4, LEFT, true)
+        text(str .. (ok and "" or " SR"), size, color, l + icon + 8, l + icon + 8 + w + 200, t, t + size + 4, LEFT, true)
     end
 
     -- body under the shield, tinted with the rank colour

@@ -409,12 +409,14 @@ local function build(menu, controller)
     -- number with the official SR logo in front of it; align "center" or "left"
     local function srValue(parent, value, size, color, x, t, align)
         local str = tostring(value)
-        local w = math.floor(#str * size * 0.62)
+        -- width of the digits of this bold font (about 0.72 of the size); the
+        -- text box gets a lot more room so a number never wraps
+        local w = math.floor(#str * size * 0.72)
         local icon = size * 0.95
         local l = (align == "left") and x or (x - (w + icon + 8) / 2)
         local _, ok = image(parent, SR_ICON, 1, l, l + icon, t + size * 0.14, t + size * 0.14 + icon * 0.89)
         if not ok then str = str .. " SR" end
-        return text(parent, str, size, color, l + icon + 8, l + icon + 8 + w + 80, t, t + size + 4, LEFT, true)
+        return text(parent, str, size, color, l + icon + 8, l + icon + 8 + w + 240, t, t + size + 4, LEFT, true)
     end
     -- RP amount with the star in front of it
     local function rpValue(parent, value, size, x, t)
@@ -482,10 +484,10 @@ local function build(menu, controller)
         image(root, MODE_ICON, 1, -785, -685, 128, 228)
         nameL = -670
     end
-    text(root, player, 26, WHITE, nameL, -60, 130, 162, LEFT, true)
+    text(root, player, 26, WHITE, nameL, -130, 130, 162, LEFT, true)
     shield(root, nameL + 16, 166, 32, i, list[cur].tier, 1)
     accent(text(root, stepLabel(list[cur]), 22, rank.color, nameL + 40, nameL + 330, 170, 196, LEFT, true), 2)
-    text(root, percentText(p.sr), 18, WHITE, nameL + 230, nameL + 420, 172, 196, LEFT, true)
+    text(root, percentText(p.sr), 18, WHITE, nameL + 200, nameL + 390, 172, 196, LEFT, true)
     local days = math.floor(seasonLeft / 86400)
     local hours = math.floor((seasonLeft % 86400) / 3600)
     text(root, "SEASON " .. seasonNumber .. "   |   ENDS IN " .. days .. "D " .. string.format("%02d", hours) .. "H",
@@ -948,7 +950,7 @@ local function build(menu, controller)
     end
 
     -- page buttons in the header, with an underline on the current page
-    local navL, navW = -40, 164
+    local navL, navW = -120, 178
     local underline = accent(box(root, rank.color, 1, navL, navL + navW - 10, 186, 190), 6)
     local function showView(k)
         current = k
@@ -968,7 +970,10 @@ local function build(menu, controller)
         local btn = MenuBuilder.BuildRegisteredType("GenericButton", { controllerIndex = controller })
         btn:SetAnchorsAndPosition(0.5, 0.5, 0, 1, l, l + navW - 10, 134, 182)
         root:addElement(btn)
-        if btn.Text then pcall(btn.Text.setText, btn.Text, name) end
+        if btn.Text then
+            pcall(btn.Text.SetFontSize, btn.Text, 18)
+            pcall(btn.Text.setText, btn.Text, name)
+        end
         btn:addEventHandler("button_action", function() pcall(showView, k) end)
     end
 

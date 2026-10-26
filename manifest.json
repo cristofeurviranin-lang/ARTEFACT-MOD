@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "f47bd371",
+  "version": "04302c2f",
   "clients": [
     {
       "id": "lumen",
@@ -99,9 +99,9 @@
     {
       "id": "br95_ranked_v1",
       "client": "lumen",
-      "title": "BR95 RANKED V2 (Warzone)",
+      "title": "BR95 RANKED V2 0.1 (Warzone)",
       "description": "Offline ranked mode for Warzone with the official Ranked Play look: official divisions Bronze to Top 250 with I / II / III, official shields and SR logo, fast climb in Bronze / Silver / Gold then harder from Platinum, 3 daily quests (SR + RP rewards), stats and charts (SR, kills, playtime), a local ranking of 200 to 5000 players, rank card in the lobby, live tracker and result screen. Resurgence quads.",
-      "version": "c8bd6c66",
+      "version": "5dcadff2",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
@@ -111,12 +111,12 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_lobby_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_lobby_post.lua",
-          "sha256": "aef8f15e06cfd78f452c61d4e514425413cf7d7823a296ab1aa2b7766cdd1c4b"
+          "sha256": "c625fe345c5bff83ab20599b48dec982a7245f059d42c4761c570f0d87489d82"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
-          "sha256": "f11673165a07e4c787c6c55ccb806e09b507f3192e9f57599e37cd463c47ca9e"
+          "sha256": "8da2814bd35766cc2d43110554423e171a0c3c61e9556b683a948d29690540f3"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
