@@ -245,7 +245,14 @@ bot_lifecycle()
     if ( isbot( self ) && isalive( self ) )
         self start_ai();
 
+    // don't wait for "spawned_player": some resurgence spawns never send it
     watchdog_started = 0;
+
+    if ( isbot( self ) )
+    {
+        self thread life_watchdog();
+        watchdog_started = 1;
+    }
 
     for (;;)
     {
@@ -295,7 +302,10 @@ life_watchdog()
         if ( self isparachuting() || self isskydiving() || !self isonground() )
             continue;
 
-        if ( self count_real_primaries() > 0 )
+        self keep_gun_ready();
+
+        // a pistol alone doesn't count: the bot gets two real guns
+        if ( self count_main_guns() > 0 )
             continue;
 
         // alternate blueprint guns and plain guns in case one way fails for some weapon
@@ -316,8 +326,9 @@ start_ai()
     self.bai_enemy = undefined;
     self.bai_last_attacker = undefined;
 
-    // runs even with the combat AI off: the killer still gets ammo
+    // run even with the combat AI off: the killer still gets ammo, the bot still holds a loaded gun
     self thread reward_killer();
+    self thread bot_weapon_keeper();
 
     if ( getdvarint( "bai_enabled", 1 ) == 0 )
         return;
@@ -423,18 +434,84 @@ track_attacker()
     }
 }
 
-count_real_primaries()
+// 4 times a second: never let the bot fight with its fists or an empty gun
+// (same idea as the old iw10 bot_ammo_manager, which worked in this build)
+bot_weapon_keeper()
+{
+    self endon( "disconnect" );
+    self endon( "death" );
+    self endon( "bai_stop" );
+    level endon( "game_ended" );
+
+    for (;;)
+    {
+        wait 0.25;
+
+        if ( self isparachuting() || self isskydiving() )
+            continue;
+
+        self keep_gun_ready();
+    }
+}
+
+keep_gun_ready()
+{
+    current = self getcurrentweapon();
+
+    if ( !isdefined( current ) || !isdefined( current.basename ) || current.basename == "none" )
+        return;
+
+    if ( !is_main_gun( current ) )
+    {
+        // fists, knife or pistol in hand: take out a main gun if the bot has one
+        weapons = self getweaponslistprimaries();
+
+        foreach ( weapon in weapons )
+        {
+            if ( is_main_gun( weapon ) )
+            {
+                self scripts\cp_mp\utility\inventory_utility::_switchtoweaponimmediate( weapon );
+                return;
+            }
+        }
+
+        return;
+    }
+
+    // bots fire non-stop and would run dry, then put their gun away
+    if ( self getweaponammoclip( current ) <= 2 )
+    {
+        self givemaxammo( current );
+        self setweaponammoclip( current, weaponclipsize( current ) );
+    }
+}
+
+count_main_guns()
 {
     count = 0;
     weapons = self getweaponslistprimaries();
 
     foreach ( weapon in weapons )
     {
-        if ( is_real_gun( weapon ) )
+        if ( is_main_gun( weapon ) )
             count++;
     }
 
     return count;
+}
+
+// a real gun that isn't a pistol
+is_main_gun( weapon )
+{
+    name = weapon;
+
+    if ( !isstring( weapon ) && isdefined( weapon.basename ) )
+        name = weapon.basename;
+
+    if ( !isstring( name ) || issubstr( name, "_pi_" ) )
+        return 0;
+
+    return is_real_gun( name );
 }
 
 // guns only: fists, knives and other melee items don't count
@@ -448,7 +525,7 @@ is_real_gun( weapon )
     if ( !isstring( name ) )
         return 0;
 
-    tags = [ "_ar_", "_sm_", "_sn_", "_lm_", "_sh_", "_mr_", "_pi_", "_dm_" ];
+    tags = [ "_ar_", "_sm_", "_sn_", "_lm_", "_sh_", "_sg_", "_mr_", "_pi_", "_dm_" ];
 
     foreach ( tag in tags )
     {

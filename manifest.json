@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "f2864b44",
+  "version": "94be87ab",
   "clients": [
     {
       "id": "lumen",
@@ -21,12 +21,12 @@
       "client": "iw8",
       "title": "BR95 BETTER BOT",
       "description": "The complete bot mod: smarter armed bots, waves of 3 bots on you every 30 s, bots always within 90 m, ammo on every kill, loot drops, and the addbot / removebot / botdifficulty commands.",
-      "version": "94edd72b",
+      "version": "a5758ebe",
       "files": [
         {
           "path": "BR95_BetterBot.gsc",
           "url": "mods/iw8/br95_better_bot/BR95_BetterBot.gsc",
-          "sha256": "591f2cad32ff53e1d23b9dd103e5796588b5cbb131b1a0ca05cd2b9729b7b2cd"
+          "sha256": "21f9ac05bd7b865d3c9de772417168bafda06fedf1d6d440b6aad55218c38fe3"
         }
       ],
       "replaces": [
