@@ -7,13 +7,11 @@
       "pick": "game",
       "marker": "cod23-cod.exe",
       "mods_subdir": "",
-      "folder_hint": "your Modern Warfare III game folder (the one with cod23-cod.exe)",
+      "folder_hint": "your LUMEN game folder (the Modern Warfare III folder with cod23-cod.exe)",
       "install_help": [
-        "Click Choose folder and pick your Modern Warfare III game folder (the one with cod23-cod.exe).",
-        "Click Install on the mods you want. Uninstall removes them again.",
-        "Start the game (restart it if it was open): mods only load when the game starts.",
-        "BR95 SMART BOTS: if you use jero_warzone_bots, remove it first, both drive the same bots.",
-        "MP LEVEL: the MP SHOP needs the progression mod by @swatcookie; for the world ranking also copy BR95Sync.exe from the MP LEVEL zip into jupiter\\BR95."
+        "Click Choose folder and pick your LUMEN game folder (the Modern Warfare III folder with cod23-cod.exe). Only once.",
+        "Click Install on the mod you want.",
+        "Start the game. That's it: nothing else to copy or edit."
       ]
     }
   ],
@@ -123,8 +121,8 @@
     {
       "id": "br95_smart_bots",
       "client": "lumen",
-      "title": "BR95 SMART BOTS (Warzone)",
-      "description": "Strong Warzone bots: every enemy bot stays within 90 m of you, a wave of 3 bots on you every 30 s, every bot always has a target, instant reaction when shot, fast aim, slides and jumps in fights, infinite ammo with no reload, sprint, no spawning in walls, KO for more than 3 s = dead, the lobby never empties. Warzone only. Remove jero_warzone_bots first if you have it.",
+      "title": "BR95 REALISTIC BOTS (Warzone)",
+      "description": "REALISTIC BOT : every enemy bot stays within 90 m of you, every bot always has a target, instant reaction when shot, fast aim, slides and jumps in fights, infinite ammo with no reload, sprint, no spawning in walls, the lobby never empties. Warzone only.",
       "version": "54cd87a3",
       "files": [
         {
