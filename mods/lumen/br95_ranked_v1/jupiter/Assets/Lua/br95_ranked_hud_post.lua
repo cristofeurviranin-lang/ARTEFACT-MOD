@@ -11,6 +11,15 @@ local state = { enabled = true }
 BR95RankedHUD = state
 
 local LIVE_FILE = "jupiter/IO/br95_ranked_live.txt"
+
+-- texts in the chosen language (br95_ranked_lang_post.lua); English without it
+local function T(s, ...)
+    local L = rawget(_G, "BR95RankedLang")
+    if L and L.T then return L.T(s, ...) end
+    if select("#", ...) > 0 then return string.format(s, ...) end
+    return s
+end
+local function loadLang() pcall(function() BR95RankedLang.load() end) end
 -- official divisions, must match br95_ranked.gsc (v11)
 local RANKS = {
     { name = "BRONZE",     start = 0,     color = 0xCD7F32, icon = "bronze" },
@@ -61,7 +70,7 @@ end
 local function rankLabel(sr)
     local i = rankIndex(sr)
     local tier = tierOf(sr)
-    return RANKS[i].name .. (tier and ("  " .. ROMAN[tier + 1]) or "")
+    return T(RANKS[i].name) .. (tier and ("  " .. ROMAN[tier + 1]) or "")
 end
 
 -- range of the current step (I / II / III); nil in Top 250
@@ -227,8 +236,8 @@ local function refresh(hud)
     if not live then hud.panel:SetAlpha(0, 0); hud.hasData = false; return end
     hud.hasData = true
     if live.active == 0 and live.sr == 0 and live.kills == 0 and live.deaths == 0 then
-        hud.rank:setText("UNRANKED"); hud.rank:SetRGB(GREY, 0)
-        hud.sr:setText("RANKED OFF"); hud.delta:setText(""); hud.stats:setText("")
+        hud.rank:setText(T("UNRANKED")); hud.rank:SetRGB(GREY, 0)
+        hud.sr:setText(T("RANKED OFF")); hud.delta:setText(""); hud.stats:setText("")
         return
     end
     local color = RANKS[rankIndex(live.sr)].color
@@ -237,7 +246,7 @@ local function refresh(hud)
     hud.sr:setText(live.sr .. (hud.srIcon and "" or " SR"))
     hud.delta:setText((live.delta >= 0 and "+" or "") .. live.delta)
     hud.delta:SetRGB(live.delta >= 0 and GREEN or RED, 0)
-    hud.stats:setText("KILLS " .. live.kills .. "    DEATHS " .. live.deaths)
+    hud.stats:setText(T("KILLS %s    DEATHS %s", live.kills, live.deaths))
     if hud.color ~= color then
         hud.color = color
         for _, el in ipairs(hud.colored) do pcall(el.SetRGB, el, color, 300) end
@@ -257,6 +266,7 @@ end
 -- bar filling up. Shown once back in the menu (15 s).
 -- ------------------------------------------------------------------
 local function showEndScreen(root, live, rp)
+    loadLang()
     local after = live.sr
     local before = math.max(0, live.sr - live.delta)
     local i = rankIndex(after)
@@ -273,7 +283,7 @@ local function showEndScreen(root, live, rp)
     newBox(panel, color, 0.08, 0, 880, 0, 520)
     newBox(panel, color, 1, 0, 880, 0, 6)
     local title = newText(panel, 40, true, 30, 600, 22, 70)
-    title:setText("RANKED RESULT"); title:SetRGB(WHITE, 0)
+    title:setText(T("RANKED RESULT")); title:SetRGB(WHITE, 0)
 
     local change, changeColor = nil, WHITE
     if rankIndex(after) > rankIndex(before) then change, changeColor = "RANK UP", GREEN
@@ -283,7 +293,7 @@ local function showEndScreen(root, live, rp)
     if change then
         newBox(panel, changeColor, 1, 620, 850, 26, 66)
         local banner = newText(panel, 26, true, 620, 850, 32, 62, CENTER)
-        banner:setText(change); banner:SetRGB(BLACK, 0)
+        banner:setText(T(change)); banner:SetRGB(BLACK, 0)
     end
 
     pcall(drawLogo(panel, 30, 86, 230, true), after)
@@ -296,7 +306,7 @@ local function showEndScreen(root, live, rp)
     delta:setText((live.delta >= 0 and "+" or "") .. live.delta)
     delta:SetRGB(live.delta >= 0 and GREEN or RED, 0)
     local from = newText(panel, 18, false, 280, 850, 224, 248)
-    from:setText("FROM " .. before .. " SR  (" .. rankLabel(before) .. ")"); from:SetRGB(GREY, 0)
+    from:setText(T("FROM %s SR  (%s)", before, rankLabel(before))); from:SetRGB(GREY, 0)
     if rp and rp > 0 then
         newImage(panel, STAR_ICON, 280, 308, 258, 286)
         local rpText = newText(panel, 26, true, 316, 850, 258, 288)
@@ -313,11 +323,11 @@ local function showEndScreen(root, live, rp)
         if (k + 1) / segs <= pct + 0.0001 then segsOn[#segsOn + 1] = seg end
     end
     local nextText = newText(panel, 20, true, 30, 850, 404, 430, CENTER)
-    if lo then nextText:setText((hi - after) .. " SR TO THE NEXT STEP") else nextText:setText("TOP 250") end
+    if lo then nextText:setText(T("%s SR TO THE NEXT STEP", hi - after)) else nextText:setText(T("TOP 250")) end
     nextText:SetRGB(WHITE, 0)
 
     local stats = newText(panel, 26, true, 30, 850, 450, 486, CENTER)
-    stats:setText("KILLS " .. live.kills .. "      DEATHS " .. live.deaths)
+    stats:setText(T("KILLS %s    DEATHS %s", live.kills, live.deaths))
     stats:SetRGB(WHITE, 0)
 
     pcall(panel.SetAlpha, panel, 1, 400)
@@ -372,6 +382,7 @@ local function bind(root)
     end
     local controller = Engine.@GetFirstActiveController()
     if root._br95Hud and root._br95Hud.active then return end
+    loadLang()
 
     -- left of the screen, under the minimap. 300 x 92: shield on the left, then
     -- one column (rank / SR + gain / step bar / kills and deaths) on a common

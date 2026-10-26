@@ -18,6 +18,14 @@ local QUEST_FILE = "jupiter/IO/br95_quests.txt"
 local RP_FILE = "jupiter/IO/br95_rp.txt"
 local MENU = "BR95RankedMenu"
 
+-- texts in the chosen language (br95_ranked_lang_post.lua); English without it
+local function T(s, ...)
+    local L = rawget(_G, "BR95RankedLang")
+    if L and L.T then return L.T(s, ...) end
+    if select("#", ...) > 0 then return string.format(s, ...) end
+    return s
+end
+
 -- official divisions, must match br95_ranked.gsc (v11)
 local RANKS = {
     { name = "BRONZE",     start = 0,     color = 0xCD7F32, cost = 0,   icon = "bronze" },
@@ -70,7 +78,7 @@ end
 -- ranked: 1 on / 0 off, spawnmsg: rank message at spawn, anim: animated
 -- colors, speed: 1 slow / 2 normal / 3 fast, board: players in the RANKING page
 local function loadSettings()
-    local s = { ranked = 1, spawnmsg = 1, anim = 1, speed = 2, board = 1000 }
+    local s = { ranked = 1, spawnmsg = 1, anim = 1, speed = 2, board = 1000, lang = 1 }
     local text = readText(SETTINGS_FILE)
     if text then
         for k, v in text:gmatch("(%a+)=(%d+)") do
@@ -82,7 +90,7 @@ end
 
 local function saveSettings(s)
     return writeText(SETTINGS_FILE, "BR95C1|ranked=" .. s.ranked .. "|spawnmsg=" .. s.spawnmsg
-        .. "|anim=" .. s.anim .. "|speed=" .. s.speed .. "|board=" .. s.board .. "|END")
+        .. "|anim=" .. s.anim .. "|speed=" .. s.speed .. "|board=" .. s.board .. "|lang=" .. s.lang .. "|END")
 end
 
 local function resetRanked()
@@ -216,7 +224,7 @@ local function stepOf(list, sr)
 end
 
 local function stepLabel(s)
-    return RANKS[s.idx].name .. (s.tier and ("  " .. ROMAN[s.tier + 1]) or "")
+    return T(RANKS[s.idx].name) .. (s.tier and ("  " .. ROMAN[s.tier + 1]) or "")
 end
 
 -- share of players above you (fictional population), shown as TOP x %
@@ -235,8 +243,8 @@ end
 
 local function percentText(sr)
     local v = topPercent(sr)
-    if v >= 10 then return "TOP " .. math.floor(v + 0.5) .. "%" end
-    return "TOP " .. string.format("%.1f", v) .. "%"
+    if v >= 10 then return T("TOP %s", math.floor(v + 0.5) .. "%") end
+    return T("TOP %s", string.format("%.1f", v) .. "%")
 end
 
 local function minutesText(seconds)
@@ -358,6 +366,7 @@ end
 -- the tab
 -- ------------------------------------------------------------------
 local function build(menu, controller)
+    pcall(function() BR95RankedLang.load() end)
     local root = LUI.UIElement.new(); root.id = MENU
     root:SetAnchorsAndPosition(0, 1, 0, 1, 0, 1920, 0, 1080)
     local LEFT = LUI.Alignment and LUI.Alignment.Left
@@ -391,10 +400,10 @@ local function build(menu, controller)
         font(child, size, bold)
         if child.SetAlignment and LUI.Alignment then child:SetAlignment(align or LUI.Alignment.Center) end
         child:SetRGB(color or WHITE, 0)
-        child:setText(str)
+        child:setText(T(str))
         parent:addElement(child); return child
     end
-    local function set(el, str) if el then pcall(el.setText, el, str) end end
+    local function set(el, str) if el then pcall(el.setText, el, T(str)) end end
     -- panel with a dark body, a thin top line and a title
     local function panel(parent, title, l, r, t, b, color)
         box(parent, TILE, 0.82, l, r, t, b)
@@ -495,18 +504,18 @@ local function build(menu, controller)
     text(root, percentText(p.sr), 18, WHITE, nameL + 200, nameL + 390, 172, 196, LEFT, true)
     local days = math.floor(seasonLeft / 86400)
     local hours = math.floor((seasonLeft % 86400) / 3600)
-    text(root, "SEASON " .. seasonNumber .. "   |   ENDS IN " .. days .. "D " .. string.format("%02d", hours) .. "H",
+    text(root, T("SEASON %s   |   ENDS IN %s", seasonNumber, days .. "D " .. string.format("%02d", hours) .. "H"),
         16, GREY, nameL, -60, 204, 226, LEFT)
     -- RP chip (top right, under the page buttons)
     box(root, RPC, 0.12, 560, 780, 200, 238)
     box(root, RPC, 1, 560, 563, 200, 238)
     local rpText = rpValue(root, rp, 22, 574, 207)
     if settings.ranked == 0 then
-        text(root, "RANKED OFF: MATCHES DO NOT CHANGE YOUR SR", 16, RED, -40, 540, 210, 232, RIGHT, true)
+        text(root, "RANKED OFF: MATCHES DO NOT CHANGE YOUR SR", 16, RED, -120, 310, 210, 232, RIGHT, true)
     end
 
     -- pages
-    local PAGES = { "OVERVIEW", "QUESTS", "STATS", "RANKING", "SETTINGS" }
+    local PAGES = { "OVERVIEW", "QUESTS", "STATS", "RANKING", "SETTINGS", "LANGUAGE" }
     local views, pageButtons, current = {}, {}, 1
     for k = 1, #PAGES do
         views[k] = view(); pageButtons[k] = {}
@@ -520,7 +529,7 @@ local function build(menu, controller)
         root:addElement(btn)
         local entry = { btn = btn, l = l, r = r, t = t, b = b }
         if page == 1 then place(btn, l, r, t, b) else place(btn, l + 6000, r + 6000, t, b) end
-        local function label_(str) if btn.Text then pcall(btn.Text.setText, btn.Text, str) end end
+        local function label_(str) if btn.Text then pcall(btn.Text.setText, btn.Text, T(str)) end end
         label_(label)
         btn:addEventHandler("button_action", function() if current == page then pcall(action, label_) end end)
         pageButtons[page][#pageButtons[page] + 1] = entry
@@ -538,7 +547,7 @@ local function build(menu, controller)
     box(v, BLACK, 0.25, -735, -275, 692, 696)
     text(v, stepLabel(list[cur]), 32, WHITE, -735, -275, 656, 692, nil, true)
     local srText = srValue(v, 0, 44, WHITE, -505, 708)
-    text(v, percentText(p.sr) .. "  OF PLAYERS", 18, GREY, -735, -275, 762, 786, nil, true)
+    text(v, T("%s OF PLAYERS", percentText(p.sr)), 18, GREY, -735, -275, 762, 786, nil, true)
     -- the SR bar is the living part of the screen: it fills up, a light runs
     -- along the filled part and its tip pulses
     local BL, BR, BT, BH = -750, -260, 800, 16
@@ -558,7 +567,7 @@ local function build(menu, controller)
     if nextStep then
         text(v, list[cur].from .. "", 16, GREY, BL, BL + 150, BT + 20, BT + 40, LEFT)
         text(v, nextStep.from .. "", 16, GREY, BR - 150, BR, BT + 20, BT + 40, RIGHT)
-        text(v, (nextStep.from - p.sr) .. " SR TO GO", 18, WHITE, BL + 150, BR - 150, BT + 18, BT + 42, nil, true)
+        text(v, T("%s SR TO GO", nextStep.from - p.sr), 18, WHITE, BL + 150, BR - 150, BT + 18, BT + 42, nil, true)
         box(v, 0x1A1A1A, 1, -750, -260, 860, 960)
         shield(v, -705, 868, 84, nextStep.idx, nextStep.tier, 1)
         text(v, "NEXT PROMOTION", 16, GREY, -650, -270, 874, 894, LEFT)
@@ -571,7 +580,7 @@ local function build(menu, controller)
 
     -- division road (right, top): 8 cards in 2 rows
     panel(v, "DIVISIONS", -210, 780, 258, 494)
-    text(v, "ENTRY COST " .. rank.cost .. " SR", 16, RED, 400, 764, 268, 290, RIGHT, true)
+    text(v, T("ENTRY COST %s SR", rank.cost), 16, RED, 300, 764, 268, 290, RIGHT, true)
     local cw, ch = 990 / 4, 90
     for k, r in ipairs(RANKS) do
         local col, row = (k - 1) % 4, math.floor((k - 1) / 4)
@@ -627,7 +636,7 @@ local function build(menu, controller)
     panel(v, "DAILY QUESTS", -210, 780, 760, 984, GOLDC)
     local left = 86400 - (os.time() % 86400)
     local resetText = math.floor(left / 3600) .. "H " .. string.format("%02d", math.floor((left % 3600) / 60)) .. "M"
-    text(v, "NEW QUESTS IN " .. resetText, 16, GREY, 400, 764, 770, 792, RIGHT)
+    text(v, T("NEW QUESTS IN %s", resetText), 16, GREY, 300, 764, 770, 792, RIGHT)
     for k, q in ipairs(quests) do
         local t = 800 + (k - 1) * 58
         local val = math.min(q.goal, q.value(today_))
@@ -650,7 +659,7 @@ local function build(menu, controller)
     image(v, STAR_ICON, 1, -760, -700, 276, 336)
     text(v, "DAILY QUESTS", 44, WHITE, -690, 0, 278, 330, LEFT, true)
     text(v, "3 NEW QUESTS EVERY DAY (UTC)  |  ONLY RANKED MATCHES COUNT  |  CLAIM TO GET THE REWARD", 16, GREY, -690, 780, 332, 352, LEFT)
-    text(v, "RESET IN " .. resetText, 22, GOLDC, 300, 760, 290, 318, RIGHT, true)
+    text(v, T("RESET IN %s", resetText), 22, GOLDC, 300, 760, 290, 318, RIGHT, true)
     local function questCard(k, q)
         local t = 372 + (k - 1) * 150
         local val = math.min(q.goal, q.value(today_))
@@ -659,7 +668,7 @@ local function build(menu, controller)
         box(v, done and GREEN or GOLDC, 1, -760, -754, t, t + 136)
         if done and qs.c[k] ~= 1 then pulse(box(v, GREEN, 0.10, -754, 760, t, t + 136), 0.04, 0.14) end
         image(v, STAR_ICON, done and 1 or 0.3, -730, -650, t + 28, t + 108)
-        text(v, "QUEST " .. k, 16, GREY, -630, -200, t + 16, t + 36, LEFT)
+        text(v, T("QUEST %s", k), 16, GREY, -630, -200, t + 16, t + 36, LEFT)
         text(v, q.title, 34, done and GOLDC or WHITE, -630, 200, t + 36, t + 76, LEFT, true)
         text(v, q.desc, 18, GREY, -630, 300, t + 80, t + 102, LEFT)
         local fill = bar(v, -630, 300, t + 110, 12, done and GREEN or GOLDC)
@@ -726,7 +735,7 @@ local function build(menu, controller)
         { "WIN RATE", n > 0 and (math.floor(wins * 100 / n + 0.5) .. "%") or "-", WHITE },
         { "K/D", n > 0 and string.format("%.2f", kills / math.max(1, deaths)) or "-", WHITE },
         { "KILLS / MATCH", p.matches > 0 and string.format("%.1f", p.kills / p.matches) or "-", WHITE },
-        { "BEST MATCH", bestKills .. " KILLS", GOLDC },
+        { "BEST MATCH", T("%s KILLS", bestKills), GOLDC },
         { "RP WON", tostring(rpWon), RPC },
     }
     local tw = 1560 / #tiles
@@ -795,7 +804,7 @@ local function build(menu, controller)
     box(v, GOLDC, 1, -780, 780, 258, 260)
     image(v, shieldName(TOP, true), 1, -770, -660, 266, 376)
     local boardTitle = text(v, "", 50, GOLDC, -650, 300, 278, 334, LEFT, true)
-    text(v, "SEASON " .. seasonNumber .. "  |  THE FIRST 250 ARE THE TOP 250 (17000 SR AND MORE)", 16, GREY, -650, 780, 338, 358, LEFT)
+    text(v, T("SEASON %s  |  THE FIRST 250 ARE THE TOP 250 (17000 SR AND MORE)", seasonNumber), 16, GREY, -650, 780, 338, 358, LEFT)
     local youText = text(v, "", 20, WHITE, -650, 780, 362, 388, LEFT, true)
     local podium = {}
     for k = 1, 3 do
@@ -852,15 +861,15 @@ local function build(menu, controller)
                 pcall(row.mark.SetRGB, row.mark, e.me and GREEN or GOLDC, 0)
             end
         end
-        set(pageText, "PAGE " .. boardPage .. " / " .. boardPages)
+        set(pageText, T("PAGE %s / %s", boardPage, boardPages))
     end
     local function buildBoard()
         local size = settings.board
         entries, mine = makeBoard(seasonNumber, p.matches, player, p.sr, size)
         boardPages = math.max(1, math.ceil(#entries / 10))
-        set(boardTitle, "TOP " .. size)
-        set(youText, mine and ("YOU ARE #" .. mine .. " WITH " .. p.sr .. " SR")
-            or ("NOT IN THE TOP " .. size .. " YET: BEAT #" .. size .. " (" .. entries[#entries].sr .. " SR)"))
+        set(boardTitle, T("TOP %s", size))
+        set(youText, mine and T("YOU ARE #%s WITH %s SR", mine, p.sr)
+            or T("NOT IN THE TOP %s YET: BEAT #%s (%s SR)", size, size, entries[#entries].sr))
         pcall(youText.SetRGB, youText, mine and GREEN or WHITE, 0)
         for k = 1, 3 do
             set(podium[k].name, entries[k].name)
@@ -878,11 +887,11 @@ local function build(menu, controller)
     pageButton(4, "FIND ME", bx(6), bx(6) + W, 912, 956, function(lbl)
         if mine then showPage(math.ceil(mine / 10)) else showPage(boardPages); lbl("NOT IN IT") end
     end)
-    pageButton(4, "SIZE: " .. settings.board, bx(7), bx(7) + W, 912, 956, function(lbl)
+    pageButton(4, T("SIZE: %s", settings.board), bx(7), bx(7) + W, 912, 956, function(lbl)
         local nextSize = BOARD_SIZES[1]
         for k, sz in ipairs(BOARD_SIZES) do if sz == settings.board then nextSize = BOARD_SIZES[(k % #BOARD_SIZES) + 1] end end
         settings.board = nextSize; saveSettings(settings)
-        lbl("SIZE: " .. nextSize)
+        lbl(T("SIZE: %s", nextSize))
         buildBoard()
     end)
 
@@ -893,8 +902,8 @@ local function build(menu, controller)
     panel(v, "SETTINGS", -780, -10, 258, 984)
     panel(v, "RULES", 10, 780, 258, 984, rank.color)
     local s = settings
-    local ONOFF = { [0] = "OFF", [1] = "ON" }
-    local SPEED = { "SLOW", "NORMAL", "FAST" }
+    local ONOFF = { [0] = T("OFF"), [1] = T("ON") }
+    local SPEED = { T("SLOW"), T("NORMAL"), T("FAST") }
     local function setting(k, labelText, help, light, action)
         local t = 300 + (k - 1) * 112
         local lamp = box(v, light(), 1, -760, -754, t, t + 52)
@@ -905,23 +914,23 @@ local function build(menu, controller)
         end)
     end
     local function onoff(key) return function() return s[key] == 1 and GREEN or RED end end
-    setting(1, "RANKED: " .. ONOFF[s.ranked], "OFF = MATCHES DO NOT COST OR GIVE SR (CHANGES APPLY NEXT MATCH)", onoff("ranked"), function(lbl)
-        s.ranked = 1 - s.ranked; saveSettings(s); state.settings = s; lbl("RANKED: " .. ONOFF[s.ranked])
+    setting(1, T("RANKED: %s", ONOFF[s.ranked]), "OFF = MATCHES DO NOT COST OR GIVE SR (CHANGES APPLY NEXT MATCH)", onoff("ranked"), function(lbl)
+        s.ranked = 1 - s.ranked; saveSettings(s); state.settings = s; lbl(T("RANKED: %s", ONOFF[s.ranked]))
     end)
-    setting(2, "RANK AT SPAWN: " .. ONOFF[s.spawnmsg], "YOUR RANK ON SCREEN WHEN YOU SPAWN", onoff("spawnmsg"), function(lbl)
-        s.spawnmsg = 1 - s.spawnmsg; saveSettings(s); state.settings = s; lbl("RANK AT SPAWN: " .. ONOFF[s.spawnmsg])
+    setting(2, T("RANK AT SPAWN: %s", ONOFF[s.spawnmsg]), "YOUR RANK ON SCREEN WHEN YOU SPAWN", onoff("spawnmsg"), function(lbl)
+        s.spawnmsg = 1 - s.spawnmsg; saveSettings(s); state.settings = s; lbl(T("RANK AT SPAWN: %s", ONOFF[s.spawnmsg]))
     end)
-    setting(3, "ANIMATED COLORS: " .. ONOFF[s.anim], "FLOWING COLOURS OF IRIDESCENT AND TOP 250", onoff("anim"), function(lbl)
-        s.anim = 1 - s.anim; saveSettings(s); state.settings = s; lbl("ANIMATED COLORS: " .. ONOFF[s.anim])
+    setting(3, T("ANIMATED COLORS: %s", ONOFF[s.anim]), "FLOWING COLOURS OF IRIDESCENT AND TOP 250", onoff("anim"), function(lbl)
+        s.anim = 1 - s.anim; saveSettings(s); state.settings = s; lbl(T("ANIMATED COLORS: %s", ONOFF[s.anim]))
     end)
-    setting(4, "ANIMATION: " .. SPEED[s.speed], "SPEED OF THE FLOWING COLOURS",
+    setting(4, T("ANIMATION: %s", SPEED[s.speed]), "SPEED OF THE FLOWING COLOURS",
         function() return ({ GREY, WHITE, AMBER })[s.speed] or WHITE end, function(lbl)
-        s.speed = (s.speed % 3) + 1; saveSettings(s); state.settings = s; lbl("ANIMATION: " .. SPEED[s.speed])
+        s.speed = (s.speed % 3) + 1; saveSettings(s); state.settings = s; lbl(T("ANIMATION: %s", SPEED[s.speed]))
     end)
-    setting(5, "RANKING SIZE: " .. s.board, "PLAYERS IN THE RANKING PAGE: 200, 500, 1000, 2000, 3000 OR 5000", function() return GOLDC end, function(lbl)
+    setting(5, T("RANKING SIZE: %s", s.board), "PLAYERS IN THE RANKING PAGE: 200, 500, 1000, 2000, 3000 OR 5000", function() return GOLDC end, function(lbl)
         local nextSize = BOARD_SIZES[1]
         for k, sz in ipairs(BOARD_SIZES) do if sz == s.board then nextSize = BOARD_SIZES[(k % #BOARD_SIZES) + 1] end end
-        s.board = nextSize; saveSettings(s); lbl("RANKING SIZE: " .. nextSize)
+        s.board = nextSize; saveSettings(s); lbl(T("RANKING SIZE: %s", nextSize))
         entries = nil
     end)
     local armed = 0
@@ -932,7 +941,7 @@ local function build(menu, controller)
         else
             armed = 0
             local ok, season = newSeason()
-            if ok then lbl("SEASON " .. season .. " STARTED: SR 0") else lbl("RESET FAILED") end
+            if ok then lbl(T("SEASON %s STARTED: SR 0", season)) else lbl("RESET FAILED") end
         end
     end)
     local rules = {
@@ -944,7 +953,7 @@ local function build(menu, controller)
         { "MODE", "RANKED COUNTS ONLY IN RESURGENCE QUADS." },
         { "STEPS", "EACH DIVISION HAS 3 STEPS (I, II, III). TOP 250 STARTS AT 17000 SR." },
         { "RP", "RANKED POINTS: 3 PER KILL, +1 PER 8 SR WON, +100 PER RANK UP, WIN STREAK +10% (MAX +50%)." },
-        { "SEASON", "EVERY " .. SEASON_DAYS .. " DAYS. NEW SEASON = SR BACK TO 0." },
+        { "SEASON", T("EVERY %s DAYS. NEW SEASON = SR BACK TO 0.", SEASON_DAYS) },
         { "QUESTS", "3 DAILY QUESTS GIVE SR AND RP. CLAIM THEM IN THE QUESTS PAGE." },
     }
     for k, r in ipairs(rules) do
@@ -954,8 +963,33 @@ local function build(menu, controller)
         box(v, LINE, 1, 30, 770, t + 50, t + 51)
     end
 
-    -- page buttons in the header, with an underline on the current page
+    -- ================================================================
+    -- LANGUAGE (opened by the LANGUAGE button of the header)
+    -- ================================================================
+    v = views[6]
+    panel(v, nil, -780, 780, 258, 984, rank.color)
+    text(v, "CHOOSE YOUR LANGUAGE", 40, WHITE, -760, 760, 290, 340, nil, true)
+    local langNames = BR95RankedLang and BR95RankedLang.NAMES or { "ENGLISH" }
+    local current_ = (BR95RankedLang and BR95RankedLang.lang) or 1
+    local saved = text(v, "", 20, GREEN, -760, 760, 900, 930, nil, true)
+    local lamps = {}
+    for k, name in ipairs(langNames) do
+        local col, row = (k - 1) % 2, math.floor((k - 1) / 2)
+        local l, t = (k == #langNames and #langNames % 2 == 1) and -240 or (-560 + col * 600), 380 + row * 120
+        lamps[k] = box(v, (k == current_) and GREEN or 0x3A3A3A, 1, l, l + 8, t, t + 80)
+        local btn = pageButton(6, name, l + 14, l + 480, t, t + 80, function()
+            settings.lang = k; saveSettings(settings)
+            pcall(function() BR95RankedLang.load() end)
+            for j, lamp in ipairs(lamps) do pcall(lamp.SetRGB, lamp, (j == k) and GREEN or 0x3A3A3A, 150) end
+            set(saved, "SAVED: OPEN ANOTHER TAB, THEN COME BACK")
+        end)
+        if btn.Text then pcall(btn.Text.setText, btn.Text, name) end
+    end
+
+    -- page buttons in the header, with an underline on the current page;
+    -- the LANGUAGE button sits on the left of the RP chip
     local navL, navW = -120, 178
+    local LANG_L, LANG_R = 330, 548
     local underline = accent(box(root, rank.color, 1, navL, navL + navW - 10, 186, 190), 6)
     local function showView(k)
         current = k
@@ -967,17 +1001,25 @@ local function build(menu, controller)
                 place(e.btn, e.l + off, e.r + off, e.t, e.b)
             end
         end
-        local l = navL + (k - 1) * navW
-        place(underline, l, l + navW - 10, 186, 190)
+        if k == 6 then
+            place(underline, LANG_L, LANG_R, 240, 243)
+        else
+            local l = navL + (k - 1) * navW
+            place(underline, l, l + navW - 10, 186, 190)
+        end
     end
     for k, name in ipairs(PAGES) do
-        local l = navL + (k - 1) * navW
         local btn = MenuBuilder.BuildRegisteredType("GenericButton", { controllerIndex = controller })
-        btn:SetAnchorsAndPosition(0.5, 0.5, 0, 1, l, l + navW - 10, 134, 182)
+        if k == 6 then
+            btn:SetAnchorsAndPosition(0.5, 0.5, 0, 1, LANG_L, LANG_R, 200, 238)
+        else
+            local l = navL + (k - 1) * navW
+            btn:SetAnchorsAndPosition(0.5, 0.5, 0, 1, l, l + navW - 10, 134, 182)
+        end
         root:addElement(btn)
         if btn.Text then
             pcall(btn.Text.SetFontSize, btn.Text, 18)
-            pcall(btn.Text.setText, btn.Text, name)
+            pcall(btn.Text.setText, btn.Text, T(name))
         end
         btn:addEventHandler("button_action", function() pcall(showView, k) end)
     end

@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "ee0b02a2",
+  "version": "f2864b44",
   "clients": [
     {
       "id": "lumen",
@@ -100,23 +100,28 @@
       "id": "br95_ranked_v1",
       "client": "lumen",
       "title": "BR95 RANKED V2 0.1 (Warzone)",
-      "description": "Offline ranked mode for Warzone with the official Ranked Play look: official divisions Bronze to Top 250 with I / II / III, official shields and SR logo, fast climb in Bronze / Silver / Gold then harder from Platinum, 3 daily quests (SR + RP rewards), stats and charts (SR, kills, playtime), a local ranking of 200 to 5000 players, rank card in the lobby, live tracker and result screen. Resurgence quads. DISCORD SERVER FOR SUPPORT !",
-      "version": "5d16947f",
+      "description": "Offline ranked mode for Warzone with the official Ranked Play look: official divisions Bronze to Top 250 with I / II / III, official shields and SR logo, fast climb in Bronze / Silver / Gold then harder from Platinum, 3 daily quests (SR + RP rewards), stats and charts (SR, kills, playtime), a local ranking of 200 to 5000 players, rank card in the lobby, 7 languages (EN, FR, RU, ZH, PT, ES, AR), live tracker and result screen. Resurgence quads. DISCORD SERVER FOR SUPPORT !",
+      "version": "76525897",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_hud_post.lua",
-          "sha256": "b7e65cf144b5b699a59b7cfec1216a4804a542eddcfe045104d14616ac381351"
+          "sha256": "bb770c95489aceb2a43f73642567165369cf6628f9948b27201a26d170d72bce"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_lang_post.lua",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_lang_post.lua",
+          "sha256": "c9cde376b76a3fdd911ac4c6832fab96f72309408581b4f05863b9891f6401b5"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_lobby_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_lobby_post.lua",
-          "sha256": "c625fe345c5bff83ab20599b48dec982a7245f059d42c4761c570f0d87489d82"
+          "sha256": "2d239a776c7b36517c8c6dc148d6c3e4bc6ccdd1fa0e60e67d6929249786669d"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
-          "sha256": "8ffbecd9835432cf4b713c65c169f6ad38cfa6e02eef5ffeb0832967ea72f757"
+          "sha256": "b17447167ec2f8bde1279fb3d8a5aca40bcdbff347bd5154e78913e632c2ca82"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",

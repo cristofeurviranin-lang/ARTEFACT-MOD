@@ -20,6 +20,9 @@ local WHITE, GREY, BLACK = 0xFFFFFF, 0x9A9A9A, 0x000000
 local function addCard(widget)
     local shared = BR95RankedMenu and BR95RankedMenu.shared
     if not shared then return end
+    pcall(function() BR95RankedLang.load() end)
+    local L = rawget(_G, "BR95RankedLang")
+    local function T(s) return (L and L.T) and L.T(s) or s end
     local RANKS = shared.RANKS
     local p = shared.readProfile()
     local i = shared.rankIndex(p.sr)
@@ -74,19 +77,19 @@ local function addCard(widget)
         local o, cy = 190 * 0.30, 190 * 0.58
         image(shared.tierOverlay(i, tier), 150 - o / 2, 150 + o / 2, cy - o / 2, cy + o / 2)
     end
-    text("RANK", 16, GREY, 0, 300, 194, 214, nil, true)
+    text(T("RANK"), 16, GREY, 0, 300, 194, 214, nil, true)
     text(shared.percentText(p.sr), 36, WHITE, 0, 300, 214, 256, nil, true)
     box(rank.color, 1, 20, 280, 264, 300)
     text(shared.stepLabel(list[cur]), 22, WHITE, 20, 280, 270, 296, nil, true)
     srLine(p.sr, 22, WHITE, 306)
     if nextStep then
-        text("NEXT PROMOTION", 14, GREY, 20, 280, 342, 360, nil, true)
+        text(T("NEXT PROMOTION"), 14, GREY, 20, 280, 342, 360, nil, true)
         local pct = math.max(0, math.min(1, (p.sr - list[cur].from) / (nextStep.from - list[cur].from)))
         box(0x3A3A3A, 1, 20, 280, 366, 372)
         box(rank.color, 1, 20, 20 + math.max(1, 260 * pct), 366, 372)
         text(shared.stepLabel(nextStep) .. "  -  " .. (nextStep.from - p.sr) .. " SR", 16, WHITE, 20, 280, 380, 402, nil, true)
     else
-        text("TOP 250", 18, RANKS[#RANKS].color, 20, 280, 350, 376, nil, true)
+        text(T("TOP 250"), 18, RANKS[#RANKS].color, 20, 280, 350, 376, nil, true)
     end
     -- Ranked Points
     local rp = shared.readRP and shared.readRP() or 0
