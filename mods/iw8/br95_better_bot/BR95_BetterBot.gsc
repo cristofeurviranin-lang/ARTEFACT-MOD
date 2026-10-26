@@ -982,10 +982,42 @@ botcommands_init()
     setdvarifuninitialized( "removebot", 0);
     setdvarifuninitialized( "addbot", 0 );
     setdvarifuninitialized( "botdifficulty", 0 );
+    // bots added on their own at the start of every match (0 = off)
+    setdvarifuninitialized( "bai_autofill", 20 );
 
     level thread monitoraddbot();
 
     level thread monitorremovebot();
+
+    level thread bot_autofill();
+}
+
+// tops the match up to bai_autofill bots once it has started, so nobody has to type addbot in game
+bot_autofill()
+{
+    level endon( "game_ended" );
+
+    // let the map load and the players spawn first
+    wait 10;
+
+    target = getdvarint( "bai_autofill", 20 );
+
+    if ( target <= 0 )
+        return;
+
+    bots = 0;
+
+    foreach ( player in level.players )
+    {
+        if ( isdefined( player ) && isbot( player ) )
+            bots++;
+    }
+
+    needed = target - bots;
+
+    // anything typed with "set addbot N" in the menu is already in the match, so only the difference is added
+    if ( needed > 0 )
+        setdvar( "addbot", getdvarint( "addbot", 0 ) + needed );
 }
 
 monitoraddbot()
