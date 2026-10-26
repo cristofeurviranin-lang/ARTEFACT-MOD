@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "79a43b0e",
+  "version": "0bb8027a",
   "clients": [
     {
       "id": "lumen",
@@ -9,9 +9,9 @@
       "mods_subdir": "",
       "folder_hint": "your LUMEN game folder (the Modern Warfare III folder with cod23-cod.exe)",
       "install_help": [
-        "Click Choose folder and pick your LUMEN game folder (the Modern Warfare III folder with cod23-cod.exe). Only once.",
-        "Click Install on the mod you want.",
-        "Start the game. That's it: nothing else to copy or edit."
+        "Choose folder: pick your LUMEN game folder (only once)",
+        "Click Install on a mod",
+        "Start the game"
       ]
     }
   ],
@@ -97,24 +97,29 @@
     {
       "id": "br95_ranked_v1",
       "client": "lumen",
-      "title": "BR95 RANKED V1 (Warzone)",
-      "description": "Offline ranked mode for Warzone: ranks from Bronze to Painite, SR, in-match HUD, result screen and seasons.",
-      "version": "20a37381",
+      "title": "BR95 RANKED V2 (Warzone)",
+      "description": "Offline ranked mode for Warzone with the official Ranked Play look: official divisions Bronze to Top 250 with I / II / III, official shields and SR logo, fast climb in Bronze / Silver / Gold then harder from Platinum, 3 daily quests (SR + RP rewards), stats and charts (SR, kills, playtime), a local ranking of 200 to 5000 players, rank card in the lobby, live tracker and result screen. Resurgence quads.",
+      "version": "c8bd6c66",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_hud_post.lua",
-          "sha256": "eaf84922a88fb8afe1345121f77bcc1a4d430dcdc1859f3b7dcfc70b6ae8ba94"
+          "sha256": "b7e65cf144b5b699a59b7cfec1216a4804a542eddcfe045104d14616ac381351"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_lobby_post.lua",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_lobby_post.lua",
+          "sha256": "aef8f15e06cfd78f452c61d4e514425413cf7d7823a296ab1aa2b7766cdd1c4b"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
-          "sha256": "973831af8b4bafa55f62606ea21669d0e9b3516ccb385314e2cabbf1623d548c"
+          "sha256": "f11673165a07e4c787c6c55ccb806e09b507f3192e9f57599e37cd463c47ca9e"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
-          "sha256": "a693700331bf8c34b1719a734ae8065e6fcc96e9214a0ac0ecf589cee4f11fa1"
+          "sha256": "57d30f209edbf8f5dfe783f12a909f6ea548ac057d1301a75edaa13934b13b26"
         }
       ]
     },
@@ -134,7 +139,7 @@
     }
   ],
   "launcher": {
-    "version": "fcd73011",
+    "version": "86bf4c87",
     "files": [
       {
         "path": "core.py",
@@ -149,7 +154,7 @@
       {
         "path": "joueur.pyw",
         "url": "launcher/joueur.pyw",
-        "sha256": "4acd09c4b9e769fcd971efcd1761fc14ce98212d5b72d8bd1c4784cf25a8735b"
+        "sha256": "1f4f662388d4c5115341c09503f67b5e0f939e22fa890498eb32667cf1001fa8"
       },
       {
         "path": "assets/bo7_banner.png",
