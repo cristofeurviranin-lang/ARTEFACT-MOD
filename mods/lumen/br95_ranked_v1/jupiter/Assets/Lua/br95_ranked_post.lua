@@ -277,7 +277,12 @@ local function makeBoard(season, matches, player, playerSR, size)
         if n <= 250 then
             sr = 17000 + math.floor(15500 * (1 - (n - 1) / 250) ^ 2.4) + math.floor(rnd() * 400) + climb
         else
-            sr = math.min(16990, math.floor(16950 * (250 / n) ^ 0.55 * (0.97 + rnd() * 0.03) + climb * 0.5))
+            -- below the Top 250 the board goes down through every division to
+            -- Bronze, whatever its size (for 5000: about half Platinum or better,
+            -- the last fifth in Bronze)
+            local frac = (n - 250) / math.max(1, size - 250)
+            sr = math.floor(16990 * (1 - frac) ^ 1.8 * (0.97 + rnd() * 0.03) + climb * 0.3 * (1 - frac))
+            sr = math.max(0, math.min(16990, sr))
         end
         board[n] = { name = name, sr = sr, kills = math.floor(sr / 9 + rnd() * 900), matches = math.floor(sr / 60 + rnd() * 120) }
     end
