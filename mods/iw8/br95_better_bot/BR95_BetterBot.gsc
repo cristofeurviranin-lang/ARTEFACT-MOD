@@ -983,7 +983,7 @@ botcommands_init()
     setdvarifuninitialized( "addbot", 0 );
     setdvarifuninitialized( "botdifficulty", 0 );
     // bots added on their own at the start of every match (0 = off)
-    setdvarifuninitialized( "bai_autofill", 20 );
+    setdvarifuninitialized( "bai_autofill", 45 );
 
     level thread monitoraddbot();
 
@@ -1000,7 +1000,7 @@ bot_autofill()
     // let the map load and the players spawn first
     wait 10;
 
-    target = getdvarint( "bai_autofill", 20 );
+    target = getdvarint( "bai_autofill", 45 );
 
     if ( target <= 0 )
         return;
