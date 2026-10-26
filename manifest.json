@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "0bb8027a",
+  "version": "f47bd371",
   "clients": [
     {
       "id": "lumen",
@@ -34,7 +34,9 @@
         "BotLoot.gsc",
         "Bots.gsc"
       ]
-    },
+    }
+  ],
+  "mods_extra": [
     {
       "id": "br95_mp_level",
       "client": "lumen",
@@ -139,12 +141,12 @@
     }
   ],
   "launcher": {
-    "version": "86bf4c87",
+    "version": "9bcb0292",
     "files": [
       {
         "path": "core.py",
         "url": "launcher/core.py",
-        "sha256": "e344764036cab6c7d7114def735f7ec4dc74f3adbd649ec8252f4e41f3c31213"
+        "sha256": "b00679a1f37865943854a0b6302b147e8e1cd75a11b318a078a9f158032d4f65"
       },
       {
         "path": "ui.py",

@@ -37,6 +37,9 @@ ALLOWED_EXTENSIONS = {
     ".gsc", ".gsh", ".gscbin", ".gscc", ".csc", ".lua", ".luac", ".json", ".csv", ".txt", ".cfg", ".ini",
     ".str", ".ff", ".pak", ".xml", ".png", ".jpg", ".dds", ".wav", ".ogg", ".bik",
 }
+# what the first launchers accept: a mod with any other file goes to "mods_extra" in the
+# manifest, which they never read (they would reject the whole manifest and never update)
+LEGACY_EXTENSIONS = ALLOWED_EXTENSIONS - {".gscc"}
 SAFE_PART = re.compile(r"^[A-Za-z0-9_\-. ]+$")
 SAFE_ID = re.compile(r"^[a-z0-9_\-]+$")
 
@@ -241,23 +244,40 @@ def fetch(url):
         return response.read()
 
 
+def check_mod(mod):
+    """Raises if one mod of the manifest is malformed or unsafe."""
+    if not SAFE_ID.match(str(mod.get("id", ""))) or not SAFE_ID.match(str(mod.get("client", ""))):
+        raise ValueError("invalid mod id")
+    if not isinstance(mod.get("files"), list) or not mod["files"]:
+        raise ValueError("mod %s has no files" % mod["id"])
+    for entry in mod["files"]:
+        safe_relpath(str(entry.get("path", "")))
+        if not re.match(r"^[0-9a-f]{64}$", str(entry.get("sha256", ""))):
+            raise ValueError("bad checksum in %s" % mod["id"])
+    if not isinstance(mod.get("replaces", []), list):
+        raise ValueError("bad replaces list in %s" % mod["id"])
+    for rel in mod.get("replaces", []):
+        safe_relpath(str(rel))
+
+
 def check_manifest(manifest):
-    """Raises if anything in the manifest is malformed or unsafe."""
+    """Raises if the manifest is malformed or a launcher file is unsafe. Mods are merged from "mods"
+    and "mods_extra" (mods with files the first launchers reject: they only read "mods", so they
+    can still update themselves); a mod this launcher cannot accept is left out, not the whole file."""
     if not isinstance(manifest, dict) or not isinstance(manifest.get("mods"), list):
         raise ValueError("invalid update file")
-    for mod in manifest["mods"]:
-        if not SAFE_ID.match(str(mod.get("id", ""))) or not SAFE_ID.match(str(mod.get("client", ""))):
-            raise ValueError("invalid mod id")
-        if not isinstance(mod.get("files"), list) or not mod["files"]:
-            raise ValueError("mod %s has no files" % mod["id"])
-        for entry in mod["files"]:
-            safe_relpath(str(entry.get("path", "")))
-            if not re.match(r"^[0-9a-f]{64}$", str(entry.get("sha256", ""))):
-                raise ValueError("bad checksum in %s" % mod["id"])
-        if not isinstance(mod.get("replaces", []), list):
-            raise ValueError("bad replaces list in %s" % mod["id"])
-        for rel in mod.get("replaces", []):
-            safe_relpath(str(rel))
+    extra = manifest.get("mods_extra", [])
+    if not isinstance(extra, list):
+        raise ValueError("invalid update file")
+    accepted = []
+    for mod in manifest["mods"] + extra:
+        try:
+            check_mod(mod)
+        except (ValueError, TypeError, AttributeError):
+            continue
+        accepted.append(mod)
+    manifest["mods"] = accepted
+    manifest.pop("mods_extra", None)
     for entry in launcher_entries(manifest):
         safe_launcher_path(str(entry.get("path", "")))
         if not re.match(r"^[0-9a-f]{64}$", str(entry.get("sha256", ""))):
@@ -495,8 +515,10 @@ def build_depot(state):
 
     fingerprint = hashlib.sha256(("".join(m["client"] + m["id"] + m["version"] for m in mods) +
                                   launcher_version).encode()).hexdigest()
-    manifest = {"format": 2, "version": fingerprint[:8], "clients": load_custom_clients(), "mods": mods,
-                "launcher": {"version": launcher_version, "files": files, "media": media}}
+    legacy = [m for m in mods if all(os.path.splitext(e["path"])[1].lower() in LEGACY_EXTENSIONS for e in m["files"])]
+    extra = [m for m in mods if m not in legacy]
+    manifest = {"format": 2, "version": fingerprint[:8], "clients": load_custom_clients(), "mods": legacy,
+                "mods_extra": extra, "launcher": {"version": launcher_version, "files": files, "media": media}}
     write_json(os.path.join(DEPOT, "manifest.json"), manifest)
     return manifest
 
