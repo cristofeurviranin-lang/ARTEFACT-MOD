@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "173a9f7a",
+  "version": "9dae62d2",
   "clients": [
     {
       "id": "lumen",
@@ -47,7 +47,7 @@
       "client": "lumen",
       "title": "MP LEVEL V1 BR95",
       "description": "Level 1 to 1000 for multiplayer with a new colour every 100 levels, live HUD and result screen, 40-day seasons, WORLD RANKING and MP SHOP. The shop needs the progression mod by @swatcookie. For the world ranking to send your score, also copy BR95Sync.exe from the mod's zip into jupiter/BR95 (the launcher cannot install programs).",
-      "version": "70805cb1",
+      "version": "41ec8bd9",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_level_hud_post.lua",
@@ -57,7 +57,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_level_post.lua",
           "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_level_post.lua",
-          "sha256": "d054cd1d9b33bca9d9b4e03b2042aee98fb54a2472a2ffd1217a12e2c4c071f8"
+          "sha256": "ad1b941f5aa7aa40751276aa12c840bb179eb5b273d7fefbb7c51eb714ddcb55"
         },
         {
           "path": "jupiter/Assets/Lua/br95_main_post.lua",
@@ -67,7 +67,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_mpshop_post.lua",
           "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_mpshop_post.lua",
-          "sha256": "ca945604bde4da26ba1da030787ffe339fbfa696d95287fe61016c22ac7c309a"
+          "sha256": "b0552257f1eda70f38c707b216ec0b7e9b2163645fb741ff20a67defb2b0c1b8"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_core_post.lua",
@@ -82,7 +82,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_world_real_post.lua",
           "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_world_real_post.lua",
-          "sha256": "1ad65e266bc9e5fe3e7bfe16d7859b7b24890b89102276743be7db77555f6129"
+          "sha256": "581a973974b87309980f389dc62ab240ddd0703f2b337c86d89d217fa0839b86"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/mp/br95_mp_ranked.gscc",
@@ -104,9 +104,9 @@
     {
       "id": "br95_ranked_v1",
       "client": "lumen",
-      "title": "BR95 RANKED V2 0.1 (Warzone)",
-      "description": "Offline ranked mode for Warzone with the official Ranked Play look: official divisions Bronze to Top 250 with I / II / III, official shields and SR logo, fast climb in Bronze / Silver / Gold then harder from Platinum, 3 daily quests (SR + RP rewards), stats and charts (SR, kills, playtime), a local ranking of 200 to 5000 players, rank card in the lobby, 7 languages (EN, FR, RU, ZH, PT, ES, AR), live tracker and result screen. Resurgence quads. DISCORD SERVER FOR SUPPORT !",
-      "version": "76525897",
+      "title": "BR95 RANKED V2 0.2 (Warzone)",
+      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: new playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD in match, bots ranked around you. Challenges & Rewards: the real ranked camos unlocked by reaching a division each season + ranked challenges per division. RANKED tab: daily quests, 200 season quests, stats and charts, ranking of 200 to 5000 players, 7 languages. Fast climb in Bronze/Silver/Gold, harder from Platinum.",
+      "version": "21c49462",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
@@ -121,17 +121,27 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_lobby_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_lobby_post.lua",
-          "sha256": "2d239a776c7b36517c8c6dc148d6c3e4bc6ccdd1fa0e60e67d6929249786669d"
+          "sha256": "55dff9cdd9a067e2bc11da1af68fab087e1d1d92a71ef0dbfd1590e0c928bac9"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_official_post.lua",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_official_post.lua",
+          "sha256": "482dce5de867cdd65a85e6cb91f1bcd869a76286dd04843b4e0a72c60c370f85"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_playlist_post.lua",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_playlist_post.lua",
+          "sha256": "b73bbad136816b0564bbdc0b585c04ed221148f88008058ee99458137cb9c340"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
-          "sha256": "b17447167ec2f8bde1279fb3d8a5aca40bcdbff347bd5154e78913e632c2ca82"
+          "sha256": "ff2881c6eaa91ed76bfb885468c2d487927f6c35f151da5e0a564595c64e541d"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
-          "sha256": "57d30f209edbf8f5dfe783f12a909f6ea548ac057d1301a75edaa13934b13b26"
+          "sha256": "056afbd039fd3d4714455b2042f490a38959b99d23af836561207ca4141f1e51"
         }
       ]
     },

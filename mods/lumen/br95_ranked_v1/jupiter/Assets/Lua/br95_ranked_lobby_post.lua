@@ -17,9 +17,41 @@ local INFO_FILE = "jupiter/IO/br95_lobby_info.txt"
 local CARD = { x = 1467, y = 256 }
 local WHITE, GREY, BLACK = 0xFFFFFF, 0x9A9A9A, 0x000000
 
+-- the lobby is ranked when the RESURGENCE RANKED WARZONE playlist was picked
+-- (br95_ranked_playlist_post.lua writes BR95M1|1|...); no file yet = ranked
+local function rankedLobby()
+    local text
+    pcall(function()
+        local f = io.open("jupiter/IO/br95_mode.txt", "r")
+        if f then text = f:read("*a"); f:close() end
+    end)
+    if not text then return true end
+    return text:match("^BR95M1|(%d)") == "1"
+end
+
+-- playlist title above START MATCH, with the official Warzone Ranked emblem
+local function addTitle(widget, shared)
+    local icon = LUI.UIImage.new()
+    icon:SetAnchorsAndPosition(0, 1, 0, 1, 88, 124, 723, 759)
+    widget:addElement(icon)
+    local ok = pcall(function() icon:setImage(RegisterMaterial("jup_icon_mode_wz_ranked"), 0) end)
+    icon:SetAlpha(ok and 1 or 0, 0)
+    local title = LUI.UIText.new()
+    title:SetAnchorsAndPosition(0, 1, 0, 1, 132, 620, 729, 755)
+    shared.font(title, 22, true)
+    if title.SetAlignment and LUI.Alignment then title:SetAlignment(LUI.Alignment.Left) end
+    title:SetRGB(0xFFFFFF, 0)
+    title:setText("RESURGENCE RANKED WARZONE")
+    widget:addElement(title)
+end
+
 local function addCard(widget)
     local shared = BR95RankedMenu and BR95RankedMenu.shared
     if not shared then return end
+    if not rankedLobby() then return end
+    -- the official Ranked Play pieces are shown on the PLAY tab: no card / title of ours
+    if rawget(_G, "BR95RankedOfficial") then return end
+    pcall(addTitle, widget, shared)
     pcall(function() BR95RankedLang.load() end)
     local L = rawget(_G, "BR95RankedLang")
     local function T(s) return (L and L.T) and L.T(s) or s end

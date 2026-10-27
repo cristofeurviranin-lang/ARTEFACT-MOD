@@ -327,6 +327,196 @@ local QUESTS = {
 }
 local BONUS_SR, BONUS_RP = 40, 150
 
+-- ------------------------------------------------------------------
+-- season quests: 200 per season = 10 families x 20 tiers, ordered by tier, progress
+-- from this season's matches in the history. Reward: RP, plus SR every 5th tier.
+-- File: BR95SQ1|season|<200 x 0/1 claimed>|END
+-- ------------------------------------------------------------------
+local SEASON_QUEST_FILE = "jupiter/IO/br95_season_quests.txt"
+local SQ_FAMILIES = {
+    { title = "VETERAN",   desc = "PLAY %s RANKED MATCHES THIS SEASON",
+      goals = { 1, 3, 5, 8, 12, 16, 20, 25, 30, 40, 50, 60, 75, 90, 105, 120, 140, 160, 180, 200 },
+      value = function(h) return #h end },
+    { title = "HUNTER",    desc = "GET %s KILLS THIS SEASON",
+      goals = { 10, 25, 50, 80, 120, 160, 200, 260, 320, 400, 500, 600, 750, 900, 1050, 1200, 1400, 1600, 1800, 2000 },
+      value = function(h) local n = 0; for _, m in ipairs(h) do n = n + m.kills end; return n end },
+    { title = "WINNER",    desc = "WIN %s MATCHES THIS SEASON (MORE SR AT THE END)",
+      goals = { 1, 2, 3, 5, 7, 9, 12, 15, 18, 22, 26, 30, 35, 40, 46, 52, 60, 70, 85, 100 },
+      value = function(h) local n = 0; for _, m in ipairs(h) do if m.delta > 0 then n = n + 1 end end; return n end },
+    { title = "CLIMBER",   desc = "EARN %s SR IN WON MATCHES THIS SEASON",
+      goals = { 100, 250, 500, 800, 1200, 1600, 2000, 2600, 3200, 4000, 5000, 6000, 7500, 9000, 10500, 12000, 14000, 16000, 18000, 20000 },
+      value = function(h) local n = 0; for _, m in ipairs(h) do if m.delta > 0 then n = n + m.delta end end; return n end },
+    { title = "RAMPAGE",   desc = "GET %s KILLS IN ONE MATCH",
+      goals = { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 26, 28, 30, 35 },
+      value = function(h) local n = 0; for _, m in ipairs(h) do n = math.max(n, m.kills) end; return n end },
+    { title = "GRINDER",   desc = "PLAY %s MINUTES OF RANKED THIS SEASON",
+      goals = { 15, 30, 60, 90, 120, 180, 240, 300, 360, 450, 540, 660, 780, 900, 1050, 1200, 1400, 1600, 1800, 2100 },
+      value = function(h) local n = 0; for _, m in ipairs(h) do n = n + m.seconds end; return math.floor(n / 60) end },
+    { title = "ASCENT",    desc = "REACH %s SR THIS SEASON",
+      goals = { 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 6000, 7000, 8000, 9500, 11000, 12000, 13500, 15000, 16000, 17000 },
+      value = function(h) local n = 0; for _, m in ipairs(h) do n = math.max(n, m.sr) end; return n end },
+    { title = "CLEAN",     desc = "FINISH %s MATCHES WITH 5+ KILLS AND 2 DEATHS MAX",
+      goals = { 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 23, 26, 30, 34, 38, 44, 50 },
+      value = function(h) local n = 0; for _, m in ipairs(h) do if m.kills >= 5 and m.deaths <= 2 then n = n + 1 end end; return n end },
+    { title = "CLOSER",    desc = "GET %s KILLS IN WON MATCHES THIS SEASON",
+      goals = { 5, 15, 30, 50, 75, 100, 130, 160, 200, 250, 300, 360, 430, 500, 580, 660, 750, 850, 950, 1100 },
+      value = function(h) local n = 0; for _, m in ipairs(h) do if m.delta > 0 then n = n + m.kills end end; return n end },
+    { title = "COLLECTOR", desc = "EARN %s RP IN RANKED MATCHES THIS SEASON",
+      goals = { 50, 150, 300, 500, 750, 1000, 1300, 1600, 2000, 2500, 3000, 3600, 4300, 5000, 5800, 6600, 7500, 8500, 9500, 11000 },
+      value = function(h) local n = 0; for _, m in ipairs(h) do n = n + m.rp end; return n end },
+}
+local ROMAN_TIER = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV",
+    "XVI", "XVII", "XVIII", "XIX", "XX" }
+
+-- the 200 quests in order: tier 1 of every family, then tier 2 ...
+local function seasonQuests()
+    local list = {}
+    for tier = 1, 20 do
+        for _, fam in ipairs(SQ_FAMILIES) do
+            list[#list + 1] = { family = fam, tier = tier, goal = fam.goals[tier],
+                rp = 20 + tier * 10, sr = (tier % 5 == 0) and (tier * 4) or 0 }
+        end
+    end
+    return list
+end
+
+-- ------------------------------------------------------------------
+-- CHALLENGES & REWARDS: the real ranked camos of the game (jup_camo_rankeda..l, the
+-- ones the progression mod's cases can give) unlocked by reaching a division this
+-- season, 6 per season (Silver .. Iridescent): S1 = a..f, S2 = g..l, then again.
+-- Top 250 gives RP. Given through the progression mod: its case is opened with a
+-- draw steered onto the camo (checked first with its free sample, like the MP SHOP).
+-- Files: BR95RR1|season|<7 x 0/1>|END (rewards), BR95DQ1|season|<24 x 0/1>|END
+-- (division challenges)
+-- ------------------------------------------------------------------
+local REWARD_FILE = "jupiter/IO/br95_rank_rewards.txt"
+local DIVQ_FILE = "jupiter/IO/br95_div_quests.txt"
+local POOL_FILE = "jupiter/LocalProgression/local_case_pool.txt"
+local CAMO_SETS = { { 45883, 45884, 45885, 45886, 45887, 45888 }, { 45889, 45890, 45891, 45892, 45893, 45894 } }
+local TOP250_RP = 5000
+
+local function caseBridge()
+    local bridge = rawget(_G, "LocalProgressionRankBridge")
+    if type(bridge) ~= "table" or type(bridge.grantLocalCP) ~= "function" or type(bridge.openCase) ~= "function" then return nil end
+    return bridge
+end
+
+local function ownsItem(bridge, id)
+    local store = type(bridge.caseStore) == "table" and bridge.caseStore.store
+    return type(store) == "table" and type(store.owned) == "table" and store.owned[id] == true
+end
+
+-- the case draw: 1st random() -> rarity, 2nd -> item (items of that rarity in pool
+-- file order, each its weight). Returns a maker of a random() landing on `id`.
+local function exactRandom(bridge, id)
+    if type(bridge.caseOdds) ~= "function" then return nil end
+    local ok, rows = pcall(bridge.caseOdds)
+    if not ok or type(rows) ~= "table" then return nil end
+    local chanceOf, qualityOf, share = {}, {}, {}
+    for _, row in ipairs(rows) do
+        local item = row.item
+        if item then
+            local q = tonumber(item.quality) or 0
+            chanceOf[item.id] = tonumber(row.chance) or 0
+            qualityOf[item.id] = q
+            share[q] = tonumber(row.tierChance) or 0
+        end
+    end
+    local target = qualityOf[id]
+    if not target then return nil end
+    local low, total = 0, 0
+    for q = 0, 5 do
+        if share[q] then
+            if q < target then low = low + share[q] end
+            total = total + share[q]
+        end
+    end
+    if total <= 0 or (share[target] or 0) <= 0 then return nil end
+    local first = (low + share[target] / 2) / total
+    local text = readText(POOL_FILE)
+    if not text then return nil end
+    local before, own, sum = 0, 0, 0
+    for poolId in text:gmatch("\n(%d+)|%d|") do
+        poolId = tonumber(poolId)
+        if qualityOf[poolId] == target then
+            local c = chanceOf[poolId] or 0
+            if poolId == id then own = c elseif own == 0 then before = before + c end
+            sum = sum + c
+        end
+    end
+    if sum <= 0 or own <= 0 then return nil end
+    local second = (before + own / 2) / sum
+    return function()
+        local calls = 0
+        return function()
+            calls = calls + 1
+            if calls == 1 then return first end
+            return second
+        end
+    end
+end
+
+-- gives one camo; returns ok, message
+local function grantCamo(id)
+    local bridge = caseBridge()
+    if not bridge or type(bridge.sampleCaseItems) ~= "function" then return false, "OPEN THE CASES MENU ONCE" end
+    if ownsItem(bridge, id) then return true, "OWNED" end
+    local maker = exactRandom(bridge, id)
+    if not maker then return false, "CAMO NOT AVAILABLE" end
+    local ok, sample = pcall(bridge.sampleCaseItems, 1, maker())
+    if not ok or type(sample) ~= "table" or not sample[1] or sample[1].id ~= id then return false, "CHECK FAILED" end
+    local good, granted = pcall(bridge.grantLocalCP, tonumber(bridge.casePrice) or 1000)
+    if not good or granted ~= true then return false, "ONLY IN THE MENU" end
+    local opened, success = pcall(bridge.openCase, maker())
+    if not opened or success ~= true then return false, "OPEN A CASE IN CASES" end
+    return true, "OWNED"
+end
+
+local function camoOwned(id)
+    local bridge = caseBridge()
+    return bridge ~= nil and ownsItem(bridge, id)
+end
+
+local function readBits(path, tag, season, count)
+    local text = readText(path)
+    local s, bits
+    if text then s, bits = text:match("^" .. tag .. "|(%d+)|([01]+)|END") end
+    if tonumber(s) ~= season or not bits or #bits ~= count then return string.rep("0", count) end
+    return bits
+end
+
+local function saveBits(path, tag, season, bits)
+    return writeText(path, tag .. "|" .. season .. "|" .. bits .. "|END")
+end
+
+-- 3 ranked challenges per division, harder up to Top 250, counted on the matches
+-- started in that division this season. Only the challenges of the division you
+-- are in can be claimed (small SR: a reward, not a way to climb)
+local function divisionQuests()
+    local list = {}
+    for d = 1, 8 do
+        list[#list + 1] = { div = d, desc = "PLAY %s MATCHES IN %s", goal = 2 + d, sr = 5 + 5 * d,
+            value = function(h) return #h end }
+        list[#list + 1] = { div = d, desc = "GET %s KILLS IN ONE MATCH IN %s", goal = 6 + 2 * d, sr = 10 + 5 * d,
+            value = function(h) local n = 0; for _, m in ipairs(h) do n = math.max(n, m.kills) end; return n end }
+        list[#list + 1] = { div = d, desc = "WIN %s MATCHES IN %s", goal = 1 + math.floor(d / 2), sr = 15 + 5 * d,
+            value = function(h) local n = 0; for _, m in ipairs(h) do if m.delta > 0 then n = n + 1 end end; return n end }
+    end
+    return list
+end
+
+local function readSeasonClaims(season)
+    local text = readText(SEASON_QUEST_FILE)
+    local s, bits
+    if text then s, bits = text:match("^BR95SQ1|(%d+)|([01]+)|END") end
+    if tonumber(s) ~= season or not bits or #bits ~= 200 then return string.rep("0", 200) end
+    return bits
+end
+
+local function saveSeasonClaims(season, bits)
+    return writeText(SEASON_QUEST_FILE, "BR95SQ1|" .. season .. "|" .. bits .. "|END")
+end
+
 local function today() return math.floor(os.time() / 86400) end
 
 local function dailyQuests(day)
@@ -365,6 +555,10 @@ end
 -- ------------------------------------------------------------------
 -- the tab
 -- ------------------------------------------------------------------
+-- the quest / reward helpers in one table: build() may only see 60 outside
+-- variables (a Lua limit; above it the whole file does not load)
+local Q = { seasonQuests = seasonQuests, readSeasonClaims = readSeasonClaims, saveSeasonClaims = saveSeasonClaims, ROMAN_TIER = ROMAN_TIER, CAMO_SETS = CAMO_SETS, REWARD_FILE = REWARD_FILE, DIVQ_FILE = DIVQ_FILE, readBits = readBits, saveBits = saveBits, grantCamo = grantCamo, camoOwned = camoOwned, divisionQuests = divisionQuests, TOP250_RP = TOP250_RP }
+
 local function build(menu, controller)
     pcall(function() BR95RankedLang.load() end)
     local root = LUI.UIElement.new(); root.id = MENU
@@ -515,7 +709,7 @@ local function build(menu, controller)
     end
 
     -- pages
-    local PAGES = { "OVERVIEW", "QUESTS", "STATS", "RANKING", "SETTINGS", "LANGUAGE" }
+    local PAGES = { "OVERVIEW", "QUESTS", "STATS", "RANKING", "SETTINGS", "LANGUAGE", "SEASON QUESTS", "CHALLENGES & REWARDS" }
     local views, pageButtons, current = {}, {}, 1
     for k = 1, #PAGES do
         views[k] = view(); pageButtons[k] = {}
@@ -719,6 +913,8 @@ local function build(menu, controller)
     -- ================================================================
     -- STATS
     -- ================================================================
+    -- (each big page sits in its own block: a Lua function may only hold 200 locals)
+    do
     v = views[3]
     local kills, deaths, seconds, wins, bestKills, rpWon = 0, 0, 0, 0, 0, 0
     for _, m in ipairs(history) do
@@ -794,6 +990,8 @@ local function build(menu, controller)
         dayL[#dayL + 1] = label
     end
     chart("PLAYTIME - LAST 7 DAYS (MINUTES)", -780, 780, 664, 984, dayV, dayC, dayL, " MIN")
+
+    end
 
     -- ================================================================
     -- RANKING (200 to 5000 local players, built the first time it is shown)
@@ -894,6 +1092,231 @@ local function build(menu, controller)
         lbl(T("SIZE: %s", nextSize))
         buildBoard()
     end)
+
+    -- ================================================================
+    -- SEASON QUESTS (200 per season, opened from the QUESTS page)
+    -- ================================================================
+    local seasonHistory, sqCounts
+    do
+    v = views[7]
+    local seasonStart = os.time() + seasonLeft - SEASON_DAYS * 86400
+    seasonHistory = {}
+    for _, m in ipairs(history) do if m.time >= seasonStart then seasonHistory[#seasonHistory + 1] = m end end
+    local sq = Q.seasonQuests()
+    local claims = Q.readSeasonClaims(seasonNumber)
+    local function sqValue(q) return math.min(q.goal, q.family.value(seasonHistory)) end
+    sqCounts = function()
+        local done, claimed = 0, 0
+        for i, q in ipairs(sq) do
+            if sqValue(q) >= q.goal then done = done + 1 end
+            if claims:sub(i, i) == "1" then claimed = claimed + 1 end
+        end
+        return done, claimed
+    end
+    panel(v, nil, -780, 780, 258, 984, GOLDC)
+    image(v, STAR_ICON, 1, -760, -700, 276, 336)
+    text(v, "SEASON QUESTS", 44, WHITE, -690, 200, 278, 330, LEFT, true)
+    local sqSummary = text(v, "", 18, GREY, -690, 780, 334, 356, LEFT)
+    local sqPage, SQ_ROWS = 1, 8
+    local sqRows = {}
+    for k = 1, SQ_ROWS do
+        local t = 370 + (k - 1) * 66
+        local row = {}
+        row.back = box(v, 0x1A1A1A, 1, -760, 760, t, t + 60)
+        row.mark = box(v, GOLDC, 1, -760, -755, t, t + 60)
+        row.star = image(v, STAR_ICON, 0.4, -740, -700, t + 10, t + 50)
+        row.title = text(v, "", 22, WHITE, -690, -200, t + 6, t + 32, LEFT, true)
+        row.desc = text(v, "", 16, GREY, -690, 200, t + 34, t + 54, LEFT)
+        row.fill = bar(v, 200, 440, t + 36, 8, GOLDC)
+        row.value = text(v, "", 16, WHITE, 200, 440, t + 10, t + 30, RIGHT, true)
+        row.reward = text(v, "", 16, RPC, 450, 560, t + 20, t + 42, LEFT, true)
+        local _, label = pageButton(7, "CLAIM", 580, 750, t + 10, t + 50, function(lbl)
+            local i = (sqPage - 1) * SQ_ROWS + k
+            local q = sq[i]
+            if not q or claims:sub(i, i) == "1" or sqValue(q) < q.goal then return end
+            claims = claims:sub(1, i - 1) .. "1" .. claims:sub(i + 1)
+            Q.saveSeasonClaims(seasonNumber, claims)
+            giveReward(q.sr, q.rp)
+            rp = rp + q.rp
+            set(rpText, rp .. " RP")
+            lbl("CLAIMED")
+            pcall(state.refreshSeason)
+        end)
+        row.label = label
+        sqRows[k] = row
+    end
+    local sqPageText = text(v, "", 18, WHITE, -200, 200, 922, 946, nil, true)
+    local function showSeasonPage(n)
+        sqPage = math.max(1, math.min(math.ceil(#sq / SQ_ROWS), n))
+        for k = 1, SQ_ROWS do
+            local i = (sqPage - 1) * SQ_ROWS + k
+            local q, row = sq[i], sqRows[k]
+            if q then
+                local val = sqValue(q)
+                local done, claimed = val >= q.goal, claims:sub(i, i) == "1"
+                set(row.title, "#" .. i .. "  " .. q.family.title .. " " .. Q.ROMAN_TIER[q.tier])
+                set(row.desc, T(q.family.desc, q.goal))
+                set(row.value, val .. " / " .. q.goal)
+                row.fill(val / q.goal)
+                set(row.reward, "+" .. q.rp .. " RP" .. (q.sr > 0 and ("  +" .. q.sr .. " SR") or ""))
+                pcall(row.mark.SetRGB, row.mark, claimed and DIM or (done and GREEN or GOLDC), 0)
+                pcall(row.star.SetAlpha, row.star, done and 1 or 0.35, 0)
+                pcall(row.title.SetRGB, row.title, claimed and DIM or (done and GOLDC or WHITE), 0)
+                row.label(claimed and "CLAIMED" or (done and "CLAIM" or "IN PROGRESS"))
+            end
+        end
+        local done, claimed = sqCounts()
+        set(sqSummary, "SEASON " .. seasonNumber .. "  |  " .. done .. " / 200 COMPLETED  |  " .. claimed .. " CLAIMED  |  NEW QUESTS EVERY SEASON")
+        set(sqPageText, T("PAGE %s / %s", sqPage, math.ceil(#sq / SQ_ROWS)))
+    end
+    state.refreshSeason = function() showSeasonPage(sqPage) end
+    pageButton(7, "< PREV", -760, -560, 912, 956, function() showSeasonPage(sqPage - 1) end)
+    pageButton(7, "NEXT >", -540, -340, 912, 956, function() showSeasonPage(sqPage + 1) end)
+    pageButton(7, "FIRST TO DO", 280, 520, 912, 956, function()
+        for i, q in ipairs(sq) do
+            if claims:sub(i, i) ~= "1" then showSeasonPage(math.ceil(i / SQ_ROWS)); return end
+        end
+    end)
+    pageButton(7, "BACK TO DAILY", 540, 760, 912, 956, function() if state.openView then state.openView(2) end end)
+    showSeasonPage(1)
+    -- the way in, on the QUESTS page
+    end
+
+    -- ================================================================
+    -- CHALLENGES & REWARDS (rank camos of the season + division challenges)
+    -- ================================================================
+    do
+    v = views[8]
+    local camoSet = Q.CAMO_SETS[((seasonNumber - 1) % #Q.CAMO_SETS) + 1]
+    local rewardBits = Q.readBits(Q.REWARD_FILE, "BR95RR1", seasonNumber, 7)
+    local divBits = Q.readBits(Q.DIVQ_FILE, "BR95DQ1", seasonNumber, 24)
+    -- best SR of the season: reaching a division once unlocks its reward
+    local function bestSR()
+        local best = readProfile().sr
+        for _, m in ipairs(seasonHistory) do best = math.max(best, m.sr) end
+        return best
+    end
+    panel(v, nil, -780, 780, 258, 984, rank.color)
+    text(v, "CHALLENGES & REWARDS", 40, WHITE, -760, 300, 270, 318, LEFT, true)
+    text(v, "SEASON " .. seasonNumber .. "  |  REACH A DIVISION TO UNLOCK ITS RANKED CAMO  |  RANKED CHALLENGES GIVE SR", 16, GREY, -760, 780, 320, 342, LEFT)
+    -- left: the 7 rewards (Silver .. Top 250)
+    box(v, TILE, 0.9, -770, -30, 352, 976)
+    text(v, "RANK REWARDS", 20, GOLDC, -750, -300, 360, 386, LEFT, true)
+    local rewardRows = {}
+    for k = 1, 7 do
+        local div = k + 1
+        local t = 392 + (k - 1) * 82
+        local row = {}
+        row.back = box(v, RANKS[div].color, 0.10, -760, -40, t, t + 76)
+        shield(v, -722, t + 4, 68, div, 0, 1)
+        text(v, RANKS[div].name, 20, RANKS[div].color, -680, -460, t + 8, t + 32, LEFT, true)
+        row.status = text(v, "", 16, GREY, -680, -460, t + 40, t + 62, LEFT)
+        local camo = camoSet[k]
+        if camo then
+            local img
+            pcall(function() img = LOOT.GetItemImageByID(camo) end)
+            image(v, img, 1, -450, -374, t + 4, t + 72)
+            local name = ""
+            pcall(function() name = Engine.Localize(LOOT.GetItemNameByID(camo)) end)
+            text(v, (name ~= "" and name or ("RANKED CAMO " .. k)), 16, WHITE, -366, -210, t + 26, t + 50, LEFT, true)
+        else
+            image(v, shieldName(TOP, false), 1, -450, -374, t + 4, t + 72)
+            text(v, "+" .. Q.TOP250_RP .. " RP", 18, RPC, -366, -210, t + 26, t + 50, LEFT, true)
+        end
+        local _, label = pageButton(8, "LOCKED", -200, -50, t + 16, t + 60, function(lbl)
+            if bestSR() < RANKS[div].start or rewardBits:sub(k, k) == "1" then return end
+            local ok, msg = true, "CLAIMED"
+            if camo then ok, msg = Q.grantCamo(camo) else giveReward(0, Q.TOP250_RP); rp = rp + Q.TOP250_RP; set(rpText, rp .. " RP") end
+            if not ok then lbl(msg); return end
+            rewardBits = rewardBits:sub(1, k - 1) .. "1" .. rewardBits:sub(k + 1)
+            Q.saveBits(Q.REWARD_FILE, "BR95RR1", seasonNumber, rewardBits)
+            pcall(state.refreshRewards)
+        end)
+        row.label = label
+        rewardRows[k] = row
+    end
+    -- right: ranked challenges of one division at a time
+    local dq = Q.divisionQuests()
+    local shownDiv = rankIndex(readProfile().sr)
+    box(v, TILE, 0.9, 30, 770, 352, 976)
+    local divTitle = text(v, "", 24, WHITE, 140, 600, 372, 404, LEFT, true)
+    local divNote = text(v, "", 16, GREY, 140, 760, 406, 428, LEFT)
+    local divShield = image(v, shieldName(1, true), 1, 46, 130, 360, 444)
+    local divRows = {}
+    for k = 1, 3 do
+        local t = 470 + (k - 1) * 140
+        local row = {}
+        row.back = box(v, 0x1A1A1A, 1, 46, 754, t, t + 126)
+        row.star = image(v, STAR_ICON, 0.4, 66, 126, t + 20, t + 80)
+        row.desc = text(v, "", 20, WHITE, 140, 560, t + 14, t + 40, LEFT, true)
+        row.fill = bar(v, 140, 540, t + 60, 10, GOLDC)
+        row.value = text(v, "", 16, WHITE, 140, 540, t + 76, t + 98, RIGHT)
+        row.reward = text(v, "", 20, WHITE, 140, 400, t + 76, t + 100, LEFT, true)
+        local _, label = pageButton(8, "LOCKED", 570, 740, t + 40, t + 86, function(lbl)
+            local i = (shownDiv - 1) * 3 + k
+            local q = dq[i]
+            if not q or divBits:sub(i, i) == "1" or not row.done then return end
+            divBits = divBits:sub(1, i - 1) .. "1" .. divBits:sub(i + 1)
+            Q.saveBits(Q.DIVQ_FILE, "BR95DQ1", seasonNumber, divBits)
+            giveReward(q.sr, 0)
+            pcall(state.refreshRewards)
+        end)
+        row.label = label
+        divRows[k] = row
+    end
+    local function matchesIn(div)
+        local list = {}
+        local from, to = RANKS[div].start, RANKS[div + 1] and RANKS[div + 1].start or math.huge
+        for _, m in ipairs(seasonHistory) do
+            local before = m.sr - m.delta
+            if before >= from and before < to then list[#list + 1] = m end
+        end
+        return list
+    end
+    state.refreshRewards = function()
+        local best = bestSR()
+        for k = 1, 7 do
+            local div, row = k + 1, rewardRows[k]
+            local reached = best >= RANKS[div].start
+            local claimed = rewardBits:sub(k, k) == "1" or (camoSet[k] and Q.camoOwned(camoSet[k]))
+            set(row.status, claimed and "OWNED" or (reached and "UNLOCKED" or ("REACH " .. RANKS[div].start .. " SR")))
+            pcall(row.status.SetRGB, row.status, claimed and GREEN or (reached and GOLDC or GREY), 0)
+            pcall(row.back.SetAlpha, row.back, reached and 0.22 or 0.06, 0)
+            row.label(claimed and "OWNED" or (reached and "CLAIM" or "LOCKED"))
+        end
+        -- only the division you are in now: the passed ones cannot be claimed any more
+        local currentDiv = rankIndex(readProfile().sr)
+        local unlocked = shownDiv == currentDiv
+        local passed = shownDiv < currentDiv
+        pcall(function() divShield:setImage(RegisterMaterial(shieldName(shownDiv, true)), 0) end)
+        set(divTitle, RANKS[shownDiv].name .. " CHALLENGES")
+        pcall(divTitle.SetRGB, divTitle, RANKS[shownDiv].color, 0)
+        set(divNote, unlocked and "COUNTED ON THE MATCHES YOU START IN THIS DIVISION"
+            or (passed and "DIVISION PASSED: ITS CHALLENGES CAN NO LONGER BE CLAIMED"
+            or ("REACH " .. RANKS[shownDiv].start .. " SR TO UNLOCK")))
+        local list = matchesIn(shownDiv)
+        for k = 1, 3 do
+            local i = (shownDiv - 1) * 3 + k
+            local q, row = dq[i], divRows[k]
+            local val = unlocked and math.min(q.goal, q.value(list)) or 0
+            row.done = unlocked and val >= q.goal
+            local claimed = divBits:sub(i, i) == "1"
+            set(row.desc, T(q.desc, q.goal, RANKS[shownDiv].name))
+            row.fill(val / q.goal)
+            set(row.value, val .. " / " .. q.goal)
+            set(row.reward, "+" .. q.sr .. " SR")
+            pcall(row.star.SetAlpha, row.star, row.done and 1 or 0.35, 0)
+            row.label(claimed and "CLAIMED" or (row.done and "CLAIM" or (unlocked and "IN PROGRESS" or (passed and "PASSED" or "LOCKED"))))
+        end
+    end
+    pageButton(8, "< DIVISION", 46, 300, 912, 958, function() shownDiv = math.max(1, shownDiv - 1); pcall(state.refreshRewards) end)
+    pageButton(8, "DIVISION >", 500, 754, 912, 958, function() shownDiv = math.min(8, shownDiv + 1); pcall(state.refreshRewards) end)
+    pcall(state.refreshRewards)
+    end
+
+    local doneNow = sqCounts()
+    pageButton(2, "CHALLENGES & REWARDS", -40, 280, 228, 270, function() if state.openView then state.openView(8) end end)
+    pageButton(2, "SEASON QUESTS  " .. doneNow .. "/200", -40, 280, 284, 330, function() if state.openView then state.openView(7) end end)
 
     -- ================================================================
     -- SETTINGS (+ rules)
@@ -1004,11 +1427,16 @@ local function build(menu, controller)
         if k == 6 then
             place(underline, LANG_L, LANG_R, 240, 243)
         else
-            local l = navL + (k - 1) * navW
+            -- SEASON QUESTS (7) is opened from the QUESTS page: the underline stays on QUESTS
+            local l = navL + ((k >= 7 and 2 or k) - 1) * navW
             place(underline, l, l + navW - 10, 186, 190)
         end
+        if k == 7 and state.refreshSeason then pcall(state.refreshSeason) end
+        if k == 8 and state.refreshRewards then pcall(state.refreshRewards) end
     end
+    state.openView = showView
     for k, name in ipairs(PAGES) do
+        if k == 7 then break end
         local btn = MenuBuilder.BuildRegisteredType("GenericButton", { controllerIndex = controller })
         if k == 6 then
             btn:SetAnchorsAndPosition(0.5, 0.5, 0, 1, LANG_L, LANG_R, 200, 238)
@@ -1023,6 +1451,8 @@ local function build(menu, controller)
         end
         btn:addEventHandler("button_action", function() pcall(showView, k) end)
     end
+    -- lets the official ranked tab open one of our pages (Challenges & Rewards -> QUESTS)
+    state.showView = showView
 
     -- one 55 ms timer: SR counting up, the living SR bar, pulses, flowing colours
     state.settings = settings
@@ -1090,7 +1520,7 @@ local function install()
     if not data[MENU] then
         local sound = type(data.CustomizeMenu) == "table" and data.CustomizeMenu.menuSound or nil
         data[MENU] = { menuName = MENU, name = "RANKED", menuSound = sound,
-            isHidden = function() return false end, isDisabled = function() return false end,
+            isHidden = function() local ok, d = pcall(LeaguePlayUtils.GetLeaguePlayTypeAndMode, 0); return ok and type(d) == "table" and d.gamemode ~= 128 end, isDisabled = function() return false end,
             onFocusCallback = function() return true end, menuSpecificCallback = function() end }
     end
 

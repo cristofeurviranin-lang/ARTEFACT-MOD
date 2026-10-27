@@ -408,7 +408,7 @@ local function install()
     if not data[MENU] then
         local sound = type(data.CustomizeMenu) == "table" and data.CustomizeMenu.menuSound or nil
         data[MENU] = { menuName = MENU, name = "MP LEVEL", menuSound = sound,
-            isHidden = function() return false end, isDisabled = function() return false end,
+            isHidden = function() local ok, d = pcall(LeaguePlayUtils.GetLeaguePlayTypeAndMode, 0); return ok and type(d) == "table" and d.gamemode == 128 end, isDisabled = function() return false end,
             onFocusCallback = function() return true end, menuSpecificCallback = function() end }
     end
 
