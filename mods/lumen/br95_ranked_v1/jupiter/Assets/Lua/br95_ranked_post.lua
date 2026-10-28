@@ -1549,6 +1549,9 @@ local function build(menu, controller)
     local SPEEDS = { slow = { 16, 8, 4 }, fast = { 4, 2, 1 } }
     local phase, shown, up, shineX = 0, 0, true, BL
     root:registerEventHandler("br95_iris_tick", function()
+        -- the hidden copy in the ranked lobby (br95_ranked_official_post.lua) sleeps
+        -- until it is shown: no work 18 times a second for a page nobody sees
+        if root.br95Paused then return end
         phase = phase + 1
         if phase == 2 then
             for _, e in ipairs(intro) do pcall(e.el.SetAlpha, e.el, e.alpha, e.ms) end

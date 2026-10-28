@@ -275,14 +275,8 @@ local function install()
     -- a plain tab record like the RANKED tab (JOIN's own callbacks refresh the server list)
     local sound = type(data.CustomizeMenu) == "table" and data.CustomizeMenu.menuSound or join.menuSound
     data[TAB] = { menuName = TAB, name = "PLAY", menuSound = sound,
-        isHidden = function()
-            local wz = isWarzone()
-            if state.toldMode ~= wz then
-                state.toldMode = wz
-                writeFile("jupiter/IO/br95_wzplay_status.txt", "PLAY tab: warzone=" .. tostring(wz) .. "\n")
-            end
-            return not wz
-        end,
+        isHidden = function() return not isWarzone() end,
+
         isDisabled = function() return false end,
         onFocusCallback = function() return true end, menuSpecificCallback = function() end }
 

@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "603b104f",
+  "version": "5564658c",
   "clients": [
     {
       "id": "lumen",
@@ -45,12 +45,12 @@
       "client": "lumen",
       "title": "BETTER WARZONE MENU BR95 0.0",
       "description": "The official horizontal Warzone menu as the first tab PLAY when you start Warzone: one row per map (Ranked Play, Urzikstan, Rebirth Island, Vondel, Fortune's Keep, Hellspawn), one official card per Lumen mode with the official keyart. Pick a card and the lobby opens with that mode. Warzone only: Multiplayer and Zombies are not changed. The Ranked Play card needs BR95 RANKED.",
-      "version": "d86587b6",
+      "version": "abc50ce3",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_wzplay_post.lua",
           "url": "mods/lumen/br95_better_warzone_menu/jupiter/Assets/Lua/br95_wzplay_post.lua",
-          "sha256": "5a425fe9ae9ac4bb65c685a4c036223b55a90085f747e1db6b74fea969e6f50d"
+          "sha256": "e3a88909957a12cf428ced0e54d50ae3e5ff2c2dac139ab435900a7ea3819cf9"
         }
       ]
     }
@@ -120,7 +120,7 @@
       "client": "lumen",
       "title": "BR95 RANKED V2 0.3 (Warzone)",
       "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
-      "version": "2a87e40e",
+      "version": "c3774519",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
@@ -140,22 +140,22 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_official_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_official_post.lua",
-          "sha256": "c0209817625148515e62155b8d8e1c488827960b4d83a99e858969037c9edbe0"
+          "sha256": "311ccede6ac52d5fe88d697aa46d5aea0a7e06e936d7a5969435f26603287dd0"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_playlist_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_playlist_post.lua",
-          "sha256": "8d1cfba8f42dd8145efc486bb75d7b56e6553b5879b835872311f9b0baff4fb8"
+          "sha256": "ce4b65e5133d0c42d04e1d6953d29f308b66fc7122ba4e4b2617fb6042338a1c"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
-          "sha256": "ec6e79bc2a715b27b9dd42cca01bac84e73508fb0b01039b6aa423d618c92eda"
+          "sha256": "2a4df38f874b3fc5bf2149582ec06f9684ef26e26355a9bcf761f3e713a9fd74"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
-          "sha256": "94ef7ff4a8cc7c0826eb26c579effed239c645209d7d1ec7916d84ec067d23b0"
+          "sha256": "b3b0af2c662d773f82279c08bc2d4316658d9328e9c77bd5efc1002e2de0a146"
         }
       ]
     },
@@ -163,13 +163,13 @@
       "id": "br95_smart_bots",
       "client": "lumen",
       "title": "BR95 REALISTIC BOTS (Warzone)",
-      "description": "REALISTIC BOT : every enemy bot stays within 90 m of you, every bot always has a target, instant reaction when shot, fast aim, slides and jumps in fights, infinite ammo with no reload, sprint, no spawning in walls, the lobby never empties. Warzone only. Bot damage (normal / reduced / very reduced) and zone size (90 / 105 / 120 / 150 m) can be set in the RANKED tab SETTINGS.",
-      "version": "7426d31f",
+      "description": "REALISTIC BOT : every enemy bot stays within 90 m of you, every bot always has a target, instant reaction when shot, fast aim, slides and jumps in fights, infinite ammo with no reload, sprint, no spawning in walls, the lobby never empties. Warzone only. Bot damage (normal / reduced / very reduced) and zone size (90 / 105 / 120 / 150 m) can be set in the RANKED tab SETTINGS. v7.9: safer and lighter teleports (one at a time, never a downed bot, never onto a player).",
+      "version": "67fa11a4",
       "files": [
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_smart_bots.gscc",
           "url": "mods/lumen/br95_smart_bots/jupiter/Assets/Scripts/Custom/br/br95_smart_bots.gscc",
-          "sha256": "d5b06053e99278a9cbe6f5ac182c66e8d36ee1dc78d8bcc2d3754f1884e3503e"
+          "sha256": "7db72ea7e2313e57c51b27f67f04a4b514d1d30d9ceecda5575f52e77a66f068"
         }
       ]
     }

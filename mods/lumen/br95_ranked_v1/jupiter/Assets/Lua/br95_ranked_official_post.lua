@@ -67,12 +67,20 @@ local TAB = "BR95OfficialRankedTab"
 -- our engine's numbers given to the official stat readers:
 -- "sr" (skilldivisions) = our SR, "h_streak" (flamestreak) = win streak, "xp"
 -- (progression) = our RP (the official rank comes from it)
+-- The official widgets ask for these numbers many times per second (every frame in
+-- the lobby and in a match): a file is read at most once per second, or the menus
+-- and the match stutter.
+local fileCache = {}
 local function readFile(path)
+    local now = os.clock()
+    local c = fileCache[path]
+    if c and now - c.at < 1 then return c.text end
     local text
     pcall(function()
         local f = io.open(path, "r")
         if f then text = f:read("*a"); f:close() end
     end)
+    fileCache[path] = { at = now, text = text or "" }
     return text or ""
 end
 
@@ -81,7 +89,7 @@ function feedOurStats()
     local LP = rawget(_G, "LeaguePlayUtils")
     if type(LP) ~= "table" then return end
     P.fed = true
-    local function ours(stat)
+    local function compute(stat)
         if stat == "sr" then return tonumber(readFile("jupiter/IO/br95_ranked.txt"):match("^BR95R1|(%-?%d+)|")) end
         -- Hot Streak: our win streak, with the time of the last won match ("hs_time");
         -- the flames go out 72 hours after the last win
@@ -102,6 +110,17 @@ function feedOurStats()
             end
             return wins
         end
+    end
+    -- the same stat asked again within a second: the kept answer (no file parsing)
+    local answers = {}
+    local function ours(stat)
+        if stat ~= "sr" and stat ~= "h_streak" and stat ~= "hs_time" and stat ~= "xp" then return nil end
+        local now = os.clock()
+        local a = answers[stat]
+        if a and now - a.at < 1 then return a.value end
+        local value = compute(stat)
+        answers[stat] = { at = now, value = value }
+        return value
     end
     for _, name in ipairs({ "GetLocalPlayerStatSeasonal", "GetLocalPlayerStat" }) do
         local original = LP[name]
@@ -366,6 +385,8 @@ local function install()
             -- the page switch of THIS copy of our pages (the RANKED tab has its own)
             local menuState = rawget(_G, "BR95RankedMenu")
             local openThis = menuState and menuState.openView
+            -- its animations sleep while the layer is away (no work for a hidden page)
+            pcall(function() v2.br95Paused = true end)
             local layer = LUI.UIElement.new(); layer.id = "BR95V2Layer"
             layer:SetAnchorsAndPosition(0, 1, 0, 1, 6000, 7920, 0, 1080)
             private:addElement(layer)
@@ -380,8 +401,10 @@ local function install()
             if back.Text then pcall(back.Text.setText, back.Text, "BACK") end
             back:addEventHandler("button_action", function()
                 pcall(layer.SetAnchorsAndPosition, layer, 0, 1, 0, 1, 6000, 7920, 0, 1080)
+                pcall(function() v2.br95Paused = true end)
             end)
             P.showV2 = function(page)
+                pcall(function() v2.br95Paused = false end)
                 pcall(layer.SetAnchorsAndPosition, layer, 0, 1, 0, 1, 0, 1920, 0, 1080)
                 if openThis then pcall(openThis, page) end
             end
@@ -414,59 +437,37 @@ local function install()
 end
 
 
--- in-match probe: the HUD pieces the game builds and the official ranked functions
--- it calls during a match (to find the official SR widget).
--- Output: jupiter/IO/br95_lpgame.txt
-local G = { lines = {}, seen = {}, count = 0 }
-local function glog(s)
-    if not DEBUG then return end
-    G.lines[#G.lines + 1] = s
-    pcall(function()
-        local f = io.open("jupiter/IO/br95_lpgame.txt", "w")
-        if f then f:write(table.concat(G.lines, "\n")); f:close() end
-    end)
-end
+-- ------------------------------------------------------------------
+-- in a match of the ranked playlist
+-- ------------------------------------------------------------------
+local G = {}
 local function inMatch()
     local ok, front = pcall(function() return Engine.@InFrontend() end)
     return ok and front == false
 end
+
+-- the official SR tracker (BRSRMatchStatTracker) is caught when it is built; a timer
+-- child of ours puts the match SR on its number every second
 if type(MenuBuilder) == "table" and type(MenuBuilder.BuildRegisteredType) == "function" then
     local originalBuild = MenuBuilder.BuildRegisteredType
     MenuBuilder.BuildRegisteredType = function(name, ...)
         local result = originalBuild(name, ...)
-        -- the official SR tracker is caught when it is built; a timer on it shows our
-        -- match SR every second
-        pcall(function()
-            if result and result.id == "BRSRMatchStatTracker" and not result._br95Timer then
+        if result then
+            pcall(function()
+                if result.id ~= "BRSRMatchStatTracker" or result._br95Timer then return end
                 result._br95Timer = true
-                G.tracker = result
-                glog("SR tracker built")
-                -- the tracker itself ignores our events: a child element of ours carries the timer
                 local watch = LUI.UIElement.new(); watch.id = "BR95SRWatch"
                 result:addElement(watch)
                 watch:registerEventHandler("br95_sr_tick", function()
-                    if G.updateTracker then
-                        local ok, err = pcall(G.updateTracker, nil, result)
-                        if not ok and not G.toldError then G.toldError = true; glog("tracker update error " .. tostring(err)) end
-                    end
+                    if G.updateTracker then pcall(G.updateTracker, result) end
                 end)
                 watch:addElement(LUI.UITimer.new({ interval = 1000, event = "br95_sr_tick", disposable = false, eventTarget = watch }))
-            end
-        end)
-        if G.count < 400 and inMatch() then
-            local key = tostring(name)
-            if not G.seen[key] then
-                G.seen[key] = true; G.count = G.count + 1
-                local id = ""
-                pcall(function() id = tostring(result and result.id) end)
-                glog("hud " .. key .. " -> " .. id)
-            end
+            end)
         end
         return result
     end
 end
--- in a match: what the SR events and the ranks of the other players look like, and
--- the ranks of the bots set around ours (two steps below to one step above)
+
 do
     local LP = rawget(_G, "LeaguePlayUtils")
     local START = { 0, 1000, 2000, 3500, 5000, 8000, 12000, 17000 }
@@ -477,37 +478,24 @@ do
     end
     steps[#steps + 1] = START[8]
     local function ourSR()
-        local text = ""
-        pcall(function()
-            local f = io.open("jupiter/IO/br95_ranked.txt", "r")
-            if f then text = f:read("*a") or ""; f:close() end
-        end)
-        return tonumber(text:match("^BR95R1|(%-?%d+)|")) or 0
+        return tonumber(readFile("jupiter/IO/br95_ranked.txt"):match("^BR95R1|(%-?%d+)|")) or 0
     end
     local function stepIndex(sr)
         local n = 1
         for k, s in ipairs(steps) do if sr >= s then n = k end end
         return n
     end
-    local function hash(s)
-        local h = 7
-        for i = 1, #s do h = (h * 31 + s:byte(i)) % 1000003 end
-        return h
-    end
+    -- ranks of the players: the game passes SR 0 for everyone in a match; a real player
+    -- (xuid not 0) gets our SR, the bots (all xuid 0) a step from two below ours to one
+    -- above, changing with each request
     if type(LP) == "table" and type(LP.GetSkillDivData) == "function" then
         local original = LP.GetSkillDivData
-        local logged = 0
         LP.GetSkillDivData = function(sr, xuid, top, ...)
-            if logged < 25 and inMatch() then logged = logged + 1; glog("GetSkillDivData(" .. tostring(sr) .. ", " .. tostring(xuid) .. ", " .. tostring(top) .. ")") end
-            -- in a match the game passes SR 0 for everyone: a real player (xuid not 0)
-            -- gets our SR, the bots (all xuid 0) one step below ours
             if inMatch() then
                 local key = tostring(xuid or "0")
                 if key ~= "0" and key ~= "" then
                     sr = ourSR()
                 else
-                    -- all bots have xuid 0: the rank changes with each request, from
-                    -- two steps below ours to one step above (Gold III: Gold I .. Platinum I)
                     G.botCalls = (G.botCalls or 0) + 1
                     local k = math.max(1, math.min(#steps, stepIndex(ourSR()) - 2 + (G.botCalls * 7) % 4))
                     sr = steps[k] + 10
@@ -516,58 +504,18 @@ do
             return original(sr, xuid, top, ...)
         end
     end
-    if type(LP) == "table" and type(LP.GetParsedSREvent) == "function" then
-        local original = LP.GetParsedSREvent
-        local logged = 0
-        LP.GetParsedSREvent = function(...)
-            local results = { original(...) }
-            if logged < 30 then
-                logged = logged + 1
-                local parts = {}
-                for k = 1, select("#", ...) do parts[#parts + 1] = tostring((select(k, ...))) end
-                local r = results[1]
-                local rs = tostring(r)
-                if type(r) == "table" then
-                    local f = {}
-                    for kk, vv in pairs(r) do f[#f + 1] = tostring(kk) .. "=" .. tostring(vv) end
-                    rs = "{" .. table.concat(f, ", ") .. "}"
-                end
-                glog("GetParsedSREvent(" .. table.concat(parts, ", ") .. ") -> " .. rs)
-            end
-            return unpack(results)
-        end
-    end
-    -- the official SR tracker of the HUD (BRSRMatchStatTracker) only changes on SR
-    -- events sent by the servers: every second its number gets the SR of this match
-    -- from our engine (jupiter/IO/br95_ranked_live.txt: entry cost + kills - deaths)
-    local function findById(el, id, depth)
-        if not el or depth > 12 then return nil end
-        local eid
-        pcall(function() eid = el.id end)
-        if eid == id then return el end
-        local child
-        pcall(function() child = el:getFirstChild() end)
-        while child do
-            local found = findById(child, id, depth + 1)
-            if found then return found end
-            local nextChild
-            pcall(function() nextChild = child:getNextSibling() end)
-            child = nextChild
-        end
-    end
-    -- The number of the tracker is written again by the game (its data subscription
-    -- sets 0 every time): the number text keeps a setText of ours that always puts
-    -- our value instead of a number. Texts that are not numbers stay as they are.
-    -- the text of the tracker's "Count" comes back as a game string (not a Lua
-    -- string): compared through tostring
+
+    -- The number of the tracker ("Count") is written again by the game (0 from the
+    -- servers' data): it keeps a setText of ours that puts our value instead of a
+    -- number. Its text comes back as a game string: compared through tostring.
     local function isNumber(t)
         if t == nil then return true end
         local s = tostring(t)
         return s == "" or s:match("^[%+%-]?%d+$") ~= nil
     end
-    local function setNumbers(el, value, depth, report)
+    local function setNumbers(el, value, depth)
         if not el or depth > 8 then return end
-        local ok, err = pcall(function()
+        pcall(function()
             if not el.setText then return end
             if not el._br95Claimed then
                 local t
@@ -580,170 +528,50 @@ do
                     if G.srText and isNumber(s) then s = G.srText end
                     return original(self, s, ...)
                 end
-                if report then report[#report + 1] = tostring(el.id) .. " '" .. tostring(t) .. "'" end
             end
             el._br95SetText(el, value)
         end)
-        if not ok and report then report[#report + 1] = "error " .. tostring(err) end
         local child
         pcall(function() child = el:getFirstChild() end)
         while child do
-            setNumbers(child, value, depth + 1, report)
+            setNumbers(child, value, depth + 1)
             local nextChild
             pcall(function() nextChild = child:getNextSibling() end)
             child = nextChild
         end
     end
+    -- match SR of our engine (jupiter/IO/br95_ranked_live.txt: entry cost + kills - deaths)
     local function liveDelta()
-        local text = ""
-        pcall(function()
-            local f = io.open("jupiter/IO/br95_ranked_live.txt", "r")
-            if f then text = f:read("*a") or ""; f:close() end
-        end)
-        local delta, active = text:match("^BR95L1|%-?%d+|%d+|%d+|(%-?%d+)|(%d+)|END")
+        local delta, active = readFile("jupiter/IO/br95_ranked_live.txt"):match("^BR95L1|%-?%d+|%d+|%d+|(%-?%d+)|(%d+)|END")
         if active ~= "1" then return nil end
         return tonumber(delta)
     end
-    G.updateTracker = function(root, own)
+    G.updateTracker = function(tracker)
         if not inMatch() then return end
         local delta = liveDelta()
         if delta == nil then return end
-        if not G.toldValue then G.toldValue = true; glog("SR tracker value " .. tostring(delta)) end
         G.srText = (delta > 0 and "+" or "") .. delta
-        -- each tracker built updates itself (the HUD can build more than one)
-        if own then
-            local report = not own._br95Reported and {} or nil
-            own._br95Reported = true
-            setNumbers(own, G.srText, 0, report)
-            if report then
-                -- what the tracker is made of (ids, kinds, texts, sizes), to find its number
-                local out = {}
-                local function walk(el, depth)
-                    if not el or depth > 10 then return end
-                    local id, t, kind, rect = "", "", "", ""
-                    pcall(function() id = tostring(el.id) end)
-                    pcall(function() if el.getText then t = tostring(el:getText()) end end)
-                    kind = (el.setText and "text" or "") .. (el.setImage and "image" or "") .. (el._br95Claimed and " claimed" or "")
-                    pcall(function() rect = table.concat({ el:getLocalRect() }, ",") end)
-                    local tt = ""
-                    pcall(function() if el.getText then tt = type(el:getText()) end end)
-                    out[#out + 1] = string.rep("  ", depth) .. id .. " [" .. kind .. "] '" .. t .. "' (" .. tt .. ") " .. rect
-                    local child
-                    pcall(function() child = el:getFirstChild() end)
-                    while child do
-                        walk(child, depth + 1)
-                        local nextChild
-                        pcall(function() nextChild = child:getNextSibling() end)
-                        child = nextChild
-                    end
-                end
-                walk(own, 0)
-                local fields = {}
-                pcall(function() for k, x in pairs(own) do fields[#fields + 1] = tostring(k) .. ":" .. type(x) end end)
-                pcall(function()
-                    local f = io.open("jupiter/IO/br95_srtracker.txt", "a")
-                    if f then
-                        f:write(os.date("%H:%M:%S") .. " claimed now: " .. table.concat(report, ", ") .. " -> " .. G.srText
-                            .. " | same as G.tracker: " .. tostring(own == G.tracker) .. "\n" .. table.concat(out, "\n")
-                            .. "\nfields: " .. table.concat(fields, " ") .. "\n\n")
-                        f:close()
-                    end
-                end)
-            end
-            return
-        end
-        if not G.tracker and root then
-            G.tracker = findById(root, "BRSRMatchStatTracker", 0)
-            if G.tracker and not G.toldTracker then G.toldTracker = true; glog("SR tracker found") end
-        end
-        if G.tracker and not G.dumped then
-            G.dumped = true
-            local out = {}
-            local function walk(el, depth)
-                if not el or depth > 8 then return end
-                local id, t, kind = "", "", ""
-                pcall(function() id = tostring(el.id) end)
-                pcall(function() if el.getText then t = tostring(el:getText()) end end)
-                kind = (el.setText and "text" or "") .. (el.setImage and "image" or "")
-                out[#out + 1] = string.rep(" ", depth) .. id .. " [" .. kind .. "] '" .. t .. "'"
-                local child
-                pcall(function() child = el:getFirstChild() end)
-                while child do
-                    walk(child, depth + 1)
-                    local nextChild
-                    pcall(function() nextChild = child:getNextSibling() end)
-                    child = nextChild
-                end
-            end
-            walk(G.tracker, 0)
-            local fields = {}
-            pcall(function() for k, x in pairs(G.tracker) do fields[#fields + 1] = tostring(k) .. ":" .. type(x) end end)
-            glog("tracker tree:\n" .. table.concat(out, "\n") .. "\ntracker fields: " .. table.concat(fields, " "))
-        end
-        if G.tracker then setNumbers(G.tracker, G.srText, 0) end
-    end
-
-    -- the values the HUD watches (omnvars) while in a match
-    local DSO = LUI and LUI.DataSourceFromOmnvar
-    if DEBUG and type(DSO) == "table" and type(DSO.new) == "function" then
-        local original = DSO.new
-        local seen, n = {}, 0
-        DSO.new = function(a, b, ...)
-            local name = tostring(b ~= nil and type(a) == "table" and b or a)
-            if n < 200 and inMatch() and not seen[name] then seen[name] = true; n = n + 1; glog("omnvar " .. name) end
-            return original(a, b, ...)
-        end
+        setNumbers(tracker, G.srText, 0)
     end
 end
 
--- the official ranked functions called in a match
+-- in a match of the RESURGENCE RANKED WARZONE playlist (br95_mode.txt = 1) the game is
+-- told it is a ranked match, so it builds its official ranked HUD
 do
-    local LP = rawget(_G, "LeaguePlayUtils")
-    if DEBUG and type(LP) == "table" then
-        local seenCall = {}
-        for name, fn in pairs(LP) do
-            if type(fn) == "function" then
-                local inner = fn
-                LP[name] = function(...)
-                    if not seenCall[name] and inMatch() then
-                        seenCall[name] = true
-                        glog("LP call in match: " .. tostring(name))
-                    end
-                    return inner(...)
-                end
-            end
-        end
-    end
     local C = rawget(_G, "CONDITIONS")
     if type(C) == "table" then
-        local names = {}
-        for k in pairs(C) do
-            local s = tostring(k)
-            if s:lower():find("league") or s:lower():find("ranked") or s:find("LP") or s:find("SR") then names[#names + 1] = s end
-        end
-        glog("CONDITIONS ranked-looking: " .. table.concat(names, " "))
-        -- in a match of the RESURGENCE RANKED WARZONE playlist (br95_mode.txt = 1),
-        -- the game is told it is a ranked match so it builds its official ranked HUD
         local function rankedMatch()
             if not inMatch() then return false end
-            local text = ""
-            pcall(function()
-                local f = io.open("jupiter/IO/br95_mode.txt", "r")
-                if f then text = f:read("*a") or ""; f:close() end
-            end)
-            return text:match("^BR95M1|(%d)") == "1"
+            return readFile("jupiter/IO/br95_mode.txt"):match("^BR95M1|(%d)") == "1"
         end
         local YES = { "IsBRLeaguePlayInGame", "IsLeaguePlayInGame", "InGameLP", "IsRankedMatch", "IsBRLeaguePlay",
             "IsLeaguePlay", "IsLeaguePlayEnabled", "IsWZLeaguePlayEnabled", "IsCoreLeaguePlayEnabled" }
         local NO = { "IsBRLPRankDisplayDisabled" }
         local function override(name, answer)
             local original = C[name]
-            if type(original) ~= "function" then glog("condition " .. name .. " is " .. type(original)); return end
+            if type(original) ~= "function" then return end
             C[name] = function(...)
-                if rankedMatch() then
-                    if not G["told" .. name] then G["told" .. name] = true; glog("condition " .. name .. " -> " .. tostring(answer)) end
-                    return answer
-                end
+                if rankedMatch() then return answer end
                 return original(...)
             end
         end
@@ -752,30 +580,13 @@ do
     end
 end
 
--- every second in a match: the official SR tracker shows our match SR
-local function attachTracker(root)
-    if not root or root._br95SRTracker then return end
-    if LUI.primaryRoot and root ~= LUI.primaryRoot then return end
-    root._br95SRTracker = true
-    local watch = LUI.UIElement.new(); watch.id = "BR95SRTrackerWatch"
-    root:addElement(watch)
-    watch:registerEventHandler("br95_sr_tracker_tick", function()
-        if G.updateTracker then pcall(G.updateTracker, root) end
-    end)
-    watch:addElement(LUI.UITimer.new({ interval = 1000, event = "br95_sr_tracker_tick", disposable = false, eventTarget = watch }))
-end
-
 if LUI and LUI.UIRoot and type(LUI.UIRoot.init) == "function" then
     local originalInit = LUI.UIRoot.init
     LUI.UIRoot.init = function(root, ...)
         local result = originalInit(root, ...)
         pcall(install)
-        pcall(attachTracker, root)
         return result
     end
-end
-if LUI and LUI.roots then
-    for _, root in pairs(LUI.roots) do pcall(attachTracker, root) end
 end
 pcall(install)
 -- our divisions / stats must be there in a match too, not only once the RANKED tab opened
