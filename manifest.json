@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "e2d0269b",
+  "version": "a7131293",
   "clients": [
     {
       "id": "lumen",
@@ -38,6 +38,20 @@
         "BotAI.gsc",
         "BotLoot.gsc",
         "Bots.gsc"
+      ]
+    },
+    {
+      "id": "br95_better_warzone_menu",
+      "client": "lumen",
+      "title": "BETTER WARZONE MENU BR95 0.0",
+      "description": "The official horizontal Warzone menu as the first tab PLAY when you start Warzone: one row per map (Ranked Play, Urzikstan, Rebirth Island, Vondel, Fortune's Keep, Hellspawn), one official card per Lumen mode with the official keyart. Pick a card and the lobby opens with that mode. Warzone only: Multiplayer and Zombies are not changed. The Ranked Play card needs BR95 RANKED.",
+      "version": "d86587b6",
+      "files": [
+        {
+          "path": "jupiter/Assets/Lua/br95_wzplay_post.lua",
+          "url": "mods/lumen/br95_better_warzone_menu/jupiter/Assets/Lua/br95_wzplay_post.lua",
+          "sha256": "5a425fe9ae9ac4bb65c685a4c036223b55a90085f747e1db6b74fea969e6f50d"
+        }
       ]
     }
   ],
