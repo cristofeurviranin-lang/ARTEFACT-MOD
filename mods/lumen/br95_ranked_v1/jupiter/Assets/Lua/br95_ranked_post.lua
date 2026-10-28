@@ -29,13 +29,13 @@ end
 -- official divisions, must match br95_ranked.gsc (v11)
 local RANKS = {
     { name = "BRONZE",     start = 0,     color = 0xCD7F32, cost = { 0, 0, 0 },        icon = "bronze" },
-    { name = "SILVER",     start = 1000,  color = 0xC8C8C8, cost = { 20, 25, 30 },     icon = "silver" },
-    { name = "GOLD",       start = 2000,  color = 0xE8C05A, cost = { 35, 40, 45 },     icon = "gold" },
-    { name = "PLATINUM",   start = 3500,  color = 0x5FE0C8, cost = { 50, 55, 60 },     icon = "platinum" },
-    { name = "DIAMOND",    start = 5000,  color = 0x4FA3FF, cost = { 75, 85, 95 },     icon = "diamond" },
-    { name = "CRIMSON",    start = 8000,  color = 0xE0303A, cost = { 130, 135, 140 },  icon = "crimson" },
-    { name = "IRIDESCENT", start = 12000, color = 0xC77DFF, cost = { 170, 185, 200 },  icon = "iridescent" },
-    { name = "TOP 250",    start = 17000, color = 0xF2C14E, cost = { 210, 270 },       icon = "top250" },
+    { name = "SILVER",     start = 1000,  color = 0xC8C8C8, cost = { 10, 14, 18 },     icon = "silver" },
+    { name = "GOLD",       start = 2000,  color = 0xE8C05A, cost = { 23, 28, 33 },     icon = "gold" },
+    { name = "PLATINUM",   start = 3500,  color = 0x5FE0C8, cost = { 39, 45, 51 },     icon = "platinum" },
+    { name = "DIAMOND",    start = 5000,  color = 0x4FA3FF, cost = { 60, 70, 80 },     icon = "diamond" },
+    { name = "CRIMSON",    start = 8000,  color = 0xE0303A, cost = { 90, 100, 110 },  icon = "crimson" },
+    { name = "IRIDESCENT", start = 12000, color = 0xC77DFF, cost = { 120, 295 },      icon = "iridescent" },
+    { name = "TOP 250",    start = 17000, color = 0xF2C14E, cost = { 120, 295 },      icon = "top250" },
 }
 local IRIS, TOP = 7, 8
 local WHITE, GREY, DIM, BLACK = 0xFFFFFF, 0x9A9A9A, 0x5A5A5A, 0x000000
@@ -781,8 +781,9 @@ local function build(menu, controller)
     -- entry cost of your step (same as entry_cost of br95_ranked.gscc)
     do
         local cost
-        if i == #RANKS then
-            cost = math.min(rank.cost[2], rank.cost[1] + math.floor((p.sr - rank.start) / 50))
+        -- Iridescent and Top 250: 120, +25 every 500 SR from 12000, max 295
+        if i >= #RANKS - 1 then
+            cost = math.min(rank.cost[2], rank.cost[1] + math.floor((p.sr - 12000) / 500) * 25)
         else
             local size = (RANKS[i + 1].start - rank.start) / 3
             cost = rank.cost[math.min(3, math.floor((p.sr - rank.start) / size) + 1)]
@@ -1459,9 +1460,9 @@ local function build(menu, controller)
     section(30, 760, 760, "RULES")
     local rules = {
         { "KILLS", "KO +5, ELIMINATION +5, ASSIST +3 SR. x3 BRONZE, x2.2 SILVER, x1.4 GOLD" },
-        { "DEATHS", "-20 SR PER DEATH: x0.15 BRONZE, x0.3 SILVER, x0.55 GOLD, x0.9 PLAT, UP TO x3.3" },
-        { "SPEED", "BRONZE TO DIAMOND GO WELL. FROM CRIMSON IT GETS HARD" },
-        { "ENTRY", "SILVER 20-30, GOLD 35-45, PLAT 50-60, DIAM 75-95, CRIM 130-140, IRID 170-200, T250 270" },
+        { "DEATHS", "DEATH FEE: BRONZE FREE, SILVER -2, GOLD -3, PLAT -4, DIAM -5, CRIM -7, IRID/T250 -10" },
+        { "PLACEMENT", "TOP 12 +20, TOP 8 +40, TOP 5 +60, TOP 3 +80, 1ST +100 SR" },
+        { "ENTRY", "SILVER 10-18, GOLD 23-33, PLAT 39-51, DIAM 60-80, CRIM 90-110, IRID/T250 120-295" },
         { "MIN KILLS", "PLAT 3, DIAMOND 12, CRIMSON 35, IRIDESCENT 40, TOP 250 50" },
         { "MODE", "ONLY THE RESURGENCE RANKED WARZONE PLAYLIST COUNTS" },
         { "STEPS", "3 STEPS PER DIVISION (I, II, III). TOP 250 FROM 17000 SR" },
