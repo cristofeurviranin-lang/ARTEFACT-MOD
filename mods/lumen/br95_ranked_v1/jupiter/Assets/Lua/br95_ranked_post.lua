@@ -80,7 +80,7 @@ end
 -- botdmg: 1 normal / 2 reduced / 3 very reduced, zone: 1 90 m / 2 105 m / 3 120 m / 4 150 m
 -- (copied to br95_bots.txt, read by br95_smart_bots.gscc at the start of a match)
 local function loadSettings()
-    local s = { ranked = 1, spawnmsg = 1, anim = 1, speed = 2, board = 1000, lang = 1, botdmg = 1, zone = 1 }
+    local s = { ranked = 1, spawnmsg = 1, anim = 1, speed = 2, board = 1000, lang = 1, botdmg = 1, zone = 1, hud = 1 }
     local text = readText(SETTINGS_FILE)
     if text then
         for k, v in text:gmatch("(%a+)=(%d+)") do
@@ -94,7 +94,7 @@ local function saveSettings(s)
     writeText("jupiter/IO/br95_bots.txt", "BR95B1|dmg=" .. s.botdmg .. "|zone=" .. s.zone .. "|END")
     return writeText(SETTINGS_FILE, "BR95C1|ranked=" .. s.ranked .. "|spawnmsg=" .. s.spawnmsg
         .. "|anim=" .. s.anim .. "|speed=" .. s.speed .. "|board=" .. s.board .. "|lang=" .. s.lang
-        .. "|botdmg=" .. s.botdmg .. "|zone=" .. s.zone .. "|END")
+        .. "|botdmg=" .. s.botdmg .. "|zone=" .. s.zone .. "|hud=" .. s.hud .. "|END")
 end
 
 local function resetRanked()
@@ -1428,7 +1428,9 @@ local function build(menu, controller)
 
     -- ---------------- right: DISPLAY + SEASON + RULES ----------------
     section(30, 760, 278, "DISPLAY")
-    toggle(30, 760, 320, "anim", "ANIMATED COLORS")
+    toggle(30, 390, 320, "anim", "ANIMATED COLORS")
+    -- the rank panel on the left in a match (br95_ranked_hud_post.lua reads hud=)
+    toggle(400, 760, 320, "hud", "RANKED HUD")
     text(v, "SPEED OF THE FLOWING COLOURS (IRIDESCENT, TOP 250)", 16, GREY, 30, 760, 380, 398, LEFT, true)
     choice(30, 760, 404, { T("SLOW"), T("NORMAL"), T("FAST") }, function() return s.speed end, function(k) s.speed = k end)
     text(v, "RANKING SIZE (PLAYERS IN THE RANKING PAGE)", 16, GREY, 30, 760, 474, 492, LEFT, true)

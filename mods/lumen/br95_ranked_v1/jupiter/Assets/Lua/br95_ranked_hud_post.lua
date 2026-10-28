@@ -380,6 +380,13 @@ local function bind(root)
         pcall(frontendWatch, root)
         return
     end
+    -- RANKED tab > SETTINGS > RANKED HUD: hud=0 in br95_settings.txt hides this panel
+    pcall(function()
+        local f = io.open("jupiter/IO/br95_settings.txt", "r")
+        if not f then return end
+        local text = f:read("*a") or ""; f:close()
+        state.enabled = text:match("hud=(%d)") ~= "0"
+    end)
     local controller = Engine.@GetFirstActiveController()
     if root._br95Hud and root._br95Hud.active then return end
     loadLang()

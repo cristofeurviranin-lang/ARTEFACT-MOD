@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "70e33d61",
+  "version": "e2d0269b",
   "clients": [
     {
       "id": "lumen",
@@ -105,13 +105,13 @@
       "id": "br95_ranked_v1",
       "client": "lumen",
       "title": "BR95 RANKED V2 0.3 (Warzone)",
-      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: new playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD in match, bots ranked around you. Challenges & Rewards: the real ranked camos unlocked by reaching a division each season + ranked challenges per division. RANKED tab: daily quests, 200 season quests, stats and charts, ranking of 200 to 5000 players, 7 languages. Fast climb in Bronze/Silver/Gold, harder from Platinum. V2 0.3: SR for KO, elimination and assist synced with the game kill counter, official SR counter in match, entry cost per step, easier Platinum/Diamond and softer deaths below Diamond, bot damage and zone settings.",
-      "version": "c7938138",
+      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: new playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD in match, bots ranked around you. Challenges & Rewards: the real ranked camos unlocked by reaching a division each season + ranked challenges per division. RANKED tab: daily quests, 200 season quests, stats and charts, ranking of 200 to 5000 players, 7 languages. Fast climb in Bronze/Silver/Gold, harder from Platinum. V2 0.3: SR for KO, elimination and assist synced with the game kill counter, official SR counter in match, entry cost per step, easier Platinum/Diamond and softer deaths below Diamond, bot damage and zone settings, RANKED HUD on/off in SETTINGS.",
+      "version": "7ac953b3",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_hud_post.lua",
-          "sha256": "bb770c95489aceb2a43f73642567165369cf6628f9948b27201a26d170d72bce"
+          "sha256": "1ad3acbb715afab69d50dd48f8dce7993289012ff4d2f2660bec22113df0b1f5"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_lang_post.lua",
@@ -136,7 +136,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
-          "sha256": "6753ee8a535c7edfede87584d3394a025c8db94df5344056b451832cd00371f0"
+          "sha256": "e374920d6a00b824cfcd1babf54ab7085f81fd1ebec259fa5d68033edf202018"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
