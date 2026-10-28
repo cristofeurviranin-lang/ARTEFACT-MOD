@@ -28,14 +28,14 @@ end
 
 -- official divisions, must match br95_ranked.gsc (v11)
 local RANKS = {
-    { name = "BRONZE",     start = 0,     color = 0xCD7F32, cost = 0,   icon = "bronze" },
-    { name = "SILVER",     start = 1000,  color = 0xC8C8C8, cost = 10,  icon = "silver" },
-    { name = "GOLD",       start = 2000,  color = 0xE8C05A, cost = 30,  icon = "gold" },
-    { name = "PLATINUM",   start = 3500,  color = 0x5FE0C8, cost = 70,  icon = "platinum" },
-    { name = "DIAMOND",    start = 5000,  color = 0x4FA3FF, cost = 120, icon = "diamond" },
-    { name = "CRIMSON",    start = 8000,  color = 0xE0303A, cost = 160, icon = "crimson" },
-    { name = "IRIDESCENT", start = 12000, color = 0xC77DFF, cost = 200, icon = "iridescent" },
-    { name = "TOP 250",    start = 17000, color = 0xF2C14E, cost = 260, icon = "top250" },
+    { name = "BRONZE",     start = 0,     color = 0xCD7F32, cost = { 0, 0, 0 },        icon = "bronze" },
+    { name = "SILVER",     start = 1000,  color = 0xC8C8C8, cost = { 20, 25, 30 },     icon = "silver" },
+    { name = "GOLD",       start = 2000,  color = 0xE8C05A, cost = { 35, 40, 45 },     icon = "gold" },
+    { name = "PLATINUM",   start = 3500,  color = 0x5FE0C8, cost = { 50, 55, 60 },     icon = "platinum" },
+    { name = "DIAMOND",    start = 5000,  color = 0x4FA3FF, cost = { 75, 85, 95 },     icon = "diamond" },
+    { name = "CRIMSON",    start = 8000,  color = 0xE0303A, cost = { 130, 135, 140 },  icon = "crimson" },
+    { name = "IRIDESCENT", start = 12000, color = 0xC77DFF, cost = { 170, 185, 200 },  icon = "iridescent" },
+    { name = "TOP 250",    start = 17000, color = 0xF2C14E, cost = { 210, 270 },       icon = "top250" },
 }
 local IRIS, TOP = 7, 8
 local WHITE, GREY, DIM, BLACK = 0xFFFFFF, 0x9A9A9A, 0x5A5A5A, 0x000000
@@ -77,8 +77,10 @@ end
 
 -- ranked: 1 on / 0 off, spawnmsg: rank message at spawn, anim: animated
 -- colors, speed: 1 slow / 2 normal / 3 fast, board: players in the RANKING page
+-- botdmg: 1 normal / 2 reduced / 3 very reduced, zone: 1 90 m / 2 105 m / 3 120 m / 4 150 m
+-- (copied to br95_bots.txt, read by br95_smart_bots.gscc at the start of a match)
 local function loadSettings()
-    local s = { ranked = 1, spawnmsg = 1, anim = 1, speed = 2, board = 1000, lang = 1 }
+    local s = { ranked = 1, spawnmsg = 1, anim = 1, speed = 2, board = 1000, lang = 1, botdmg = 1, zone = 1 }
     local text = readText(SETTINGS_FILE)
     if text then
         for k, v in text:gmatch("(%a+)=(%d+)") do
@@ -89,8 +91,10 @@ local function loadSettings()
 end
 
 local function saveSettings(s)
+    writeText("jupiter/IO/br95_bots.txt", "BR95B1|dmg=" .. s.botdmg .. "|zone=" .. s.zone .. "|END")
     return writeText(SETTINGS_FILE, "BR95C1|ranked=" .. s.ranked .. "|spawnmsg=" .. s.spawnmsg
-        .. "|anim=" .. s.anim .. "|speed=" .. s.speed .. "|board=" .. s.board .. "|lang=" .. s.lang .. "|END")
+        .. "|anim=" .. s.anim .. "|speed=" .. s.speed .. "|board=" .. s.board .. "|lang=" .. s.lang
+        .. "|botdmg=" .. s.botdmg .. "|zone=" .. s.zone .. "|END")
 end
 
 local function resetRanked()
@@ -774,7 +778,17 @@ local function build(menu, controller)
 
     -- division road (right, top): 8 cards in 2 rows
     panel(v, "DIVISIONS", -210, 780, 258, 494)
-    text(v, T("ENTRY COST %s SR", rank.cost), 16, RED, 300, 764, 268, 290, RIGHT, true)
+    -- entry cost of your step (same as entry_cost of br95_ranked.gscc)
+    do
+        local cost
+        if i == #RANKS then
+            cost = math.min(rank.cost[2], rank.cost[1] + math.floor((p.sr - rank.start) / 50))
+        else
+            local size = (RANKS[i + 1].start - rank.start) / 3
+            cost = rank.cost[math.min(3, math.floor((p.sr - rank.start) / size) + 1)]
+        end
+        text(v, T("ENTRY COST %s SR", cost), 16, RED, 300, 764, 268, 290, RIGHT, true)
+    end
     local cw, ch = 990 / 4, 90
     for k, r in ipairs(RANKS) do
         local col, row = (k - 1) % 4, math.floor((k - 1) / 4)
@@ -1315,75 +1329,148 @@ local function build(menu, controller)
     end
 
     local doneNow = sqCounts()
-    pageButton(2, "CHALLENGES & REWARDS", -40, 280, 228, 270, function() if state.openView then state.openView(8) end end)
     pageButton(2, "SEASON QUESTS  " .. doneNow .. "/200", -40, 280, 284, 330, function() if state.openView then state.openView(7) end end)
 
     -- ================================================================
     -- SETTINGS (+ rules)
     -- ================================================================
     v = views[5]
-    panel(v, "SETTINGS", -780, -10, 258, 984)
-    panel(v, "RULES", 10, 780, 258, 984, rank.color)
+    do
+    panel(v, nil, -780, -10, 258, 984, rank.color)
+    panel(v, nil, 10, 780, 258, 984, rank.color)
     local s = settings
     local ONOFF = { [0] = T("OFF"), [1] = T("ON") }
-    local SPEED = { T("SLOW"), T("NORMAL"), T("FAST") }
-    local function setting(k, labelText, help, light, action)
-        local t = 300 + (k - 1) * 112
-        local lamp = box(v, light(), 1, -760, -754, t, t + 52)
-        text(v, help, 16, GREY, -740, -30, t + 60, t + 82, LEFT)
-        pageButton(5, labelText, -740, -30, t, t + 52, function(lbl)
-            pcall(action, lbl)
-            pcall(lamp.SetRGB, lamp, light(), 150)
+    local function save() saveSettings(s); state.settings = s end
+    -- section title: small rank-coloured mark, title, subtitle on the right, line under
+    local function section(l, r, t, title, sub)
+        box(v, rank.color, 1, l, l + 4, t, t + 24)
+        text(v, title, 20, WHITE, l + 14, r, t, t + 24, LEFT, true)
+        if sub then text(v, sub, 14, GREY, l, r, t + 4, t + 24, LUI.Alignment and LUI.Alignment.Right) end
+        box(v, LINE, 1, l, r, t + 30, t + 31)
+    end
+    -- ON / OFF button with a lamp on its left
+    local function toggle(l, r, t, key, name)
+        local lamp = box(v, s[key] == 1 and GREEN or RED, 1, l, l + 6, t, t + 48)
+        pageButton(5, T(name .. ": %s", ONOFF[s[key]]), l + 14, r, t, t + 48, function(lbl)
+            s[key] = 1 - s[key]; save(); lbl(T(name .. ": %s", ONOFF[s[key]]))
+            pcall(lamp.SetRGB, lamp, s[key] == 1 and GREEN or RED, 150)
         end)
     end
-    local function onoff(key) return function() return s[key] == 1 and GREEN or RED end end
-    setting(1, T("RANKED: %s", ONOFF[s.ranked]), "OFF = MATCHES DO NOT COST OR GIVE SR (CHANGES APPLY NEXT MATCH)", onoff("ranked"), function(lbl)
-        s.ranked = 1 - s.ranked; saveSettings(s); state.settings = s; lbl(T("RANKED: %s", ONOFF[s.ranked]))
-    end)
-    setting(2, T("RANK AT SPAWN: %s", ONOFF[s.spawnmsg]), "YOUR RANK ON SCREEN WHEN YOU SPAWN", onoff("spawnmsg"), function(lbl)
-        s.spawnmsg = 1 - s.spawnmsg; saveSettings(s); state.settings = s; lbl(T("RANK AT SPAWN: %s", ONOFF[s.spawnmsg]))
-    end)
-    setting(3, T("ANIMATED COLORS: %s", ONOFF[s.anim]), "FLOWING COLOURS OF IRIDESCENT AND TOP 250", onoff("anim"), function(lbl)
-        s.anim = 1 - s.anim; saveSettings(s); state.settings = s; lbl(T("ANIMATED COLORS: %s", ONOFF[s.anim]))
-    end)
-    setting(4, T("ANIMATION: %s", SPEED[s.speed]), "SPEED OF THE FLOWING COLOURS",
-        function() return ({ GREY, WHITE, AMBER })[s.speed] or WHITE end, function(lbl)
-        s.speed = (s.speed % 3) + 1; saveSettings(s); state.settings = s; lbl(T("ANIMATION: %s", SPEED[s.speed]))
-    end)
-    setting(5, T("RANKING SIZE: %s", s.board), "PLAYERS IN THE RANKING PAGE: 200, 500, 1000, 2000, 3000 OR 5000", function() return GOLDC end, function(lbl)
-        local nextSize = BOARD_SIZES[1]
-        for k, sz in ipairs(BOARD_SIZES) do if sz == s.board then nextSize = BOARD_SIZES[(k % #BOARD_SIZES) + 1] end end
-        s.board = nextSize; saveSettings(s); lbl(T("RANKING SIZE: %s", nextSize))
-        entries = nil
-    end)
+    -- row(s) of options; the picked one gets a bar in the rank colour under it.
+    -- The button text wraps under ~170 px wide: cols keeps them wide enough.
+    local function choice(l, r, t, options, get, pick, cols)
+        local n, gap = cols or #options, 8
+        local w = (r - l - gap * (n - 1)) / n
+        local bars = {}
+        local function refresh()
+            for k, bar in ipairs(bars) do
+                pcall(bar.SetRGB, bar, k == get() and rank.color or LINE, 150)
+                pcall(bar.SetAlpha, bar, k == get() and 1 or 0.6, 150)
+            end
+        end
+        for k, name in ipairs(options) do
+            local x0 = l + ((k - 1) % n) * (w + gap)
+            local y = t + math.floor((k - 1) / n) * 64
+            bars[k] = box(v, LINE, 1, x0, x0 + w, y + 52, y + 58)
+            pageButton(5, name, x0, x0 + w, y, y + 48, function() pick(k); save(); refresh() end)
+        end
+        refresh()
+    end
+    -- meter of n blocks, the first `filled` ones lit
+    local function meter(l, r, t, n)
+        local blocks = {}
+        for k = 1, n do
+            local x0 = l + (k - 1) * ((r - l) / n)
+            blocks[k] = box(v, LINE, 1, x0 + 2, x0 + (r - l) / n - 2, t, t + 10)
+        end
+        return function(filled)
+            for k, b in ipairs(blocks) do pcall(b.SetRGB, b, k <= filled and rank.color or LINE, 150) end
+        end
+    end
+
+    -- ---------------- left: MATCH + SMART BOTS ----------------
+    section(-760, -30, 278, "MATCH", "APPLIES NEXT MATCH")
+    toggle(-760, -400, 324, "ranked", "RANKED")
+    toggle(-390, -30, 324, "spawnmsg", "RANK AT SPAWN")
+    text(v, "RANKED OFF = MATCHES DO NOT COST OR GIVE SR", 15, GREY, -760, -30, 380, 400, LEFT)
+
+    section(-760, -30, 420, "SMART BOTS", "APPLIES NEXT MATCH")
+    local DMG = { "NORMAL", "REDUCED", "VERY REDUCED" }
+    local DMG_PCT = { "100%", "75%", "45%" }
+    local DMG_HELP = { "THE MOD'S BASE DAMAGE", "BOTS HIT A BIT LESS HARD", "BOTS HIT MUCH LESS HARD" }
+    local ZONE = { "90 M", "105 M", "120 M", "150 M" }
+    text(v, "BOT DAMAGE", 16, GREY, -760, -30, 462, 482, LEFT, true)
+    local dmgHelp = text(v, DMG_HELP[s.botdmg] or DMG_HELP[1], 15, GREY, -760, -30, 550, 570, LEFT)
+    text(v, "BOT ZONE AROUND YOU", 16, GREY, -760, -30, 590, 610, LEFT, true)
+    text(v, "BOTS STAY AND FIGHT INSIDE THIS RADIUS AROUND YOU", 15, GREY, -760, -30, 678, 698, LEFT)
+
+    -- live card: what the next match will use
+    box(v, rank.color, 0.10, -760, -30, 720, 964)
+    box(v, rank.color, 1, -760, -30, 720, 722)
+    text(v, "NEXT MATCH", 16, GREY, -740, -50, 734, 754, LEFT, true)
+    text(v, "BOT DAMAGE", 16, GREY, -740, -410, 770, 790, LEFT, true)
+    text(v, "BOT ZONE", 16, GREY, -380, -50, 770, 790, LEFT, true)
+    local dmgBig = text(v, DMG_PCT[s.botdmg] or "100%", 52, WHITE, -740, -410, 796, 852, LEFT, true)
+    local zoneBig = text(v, ZONE[s.zone] or ZONE[1], 52, WHITE, -380, -50, 796, 852, LEFT, true)
+    local dmgName = text(v, DMG[s.botdmg] or DMG[1], 18, rank.color, -740, -410, 860, 884, LEFT, true)
+    local zoneName = text(v, T("%s M RADIUS", ({ 90, 105, 120, 150 })[s.zone] or 90), 18, rank.color, -380, -50, 860, 884, LEFT, true)
+    local dmgMeter = meter(-740, -420, 898, 3)
+    local zoneMeter = meter(-380, -60, 898, 4)
+    text(v, "SAVED AUTOMATICALLY", 14, GREY, -740, -50, 928, 948, LEFT)
+    local function card()
+        set(dmgBig, DMG_PCT[s.botdmg]); set(dmgName, DMG[s.botdmg]); set(dmgHelp, DMG_HELP[s.botdmg])
+        set(zoneBig, ZONE[s.zone]); set(zoneName, T("%s M RADIUS", ({ 90, 105, 120, 150 })[s.zone]))
+        dmgMeter(4 - s.botdmg); zoneMeter(s.zone)
+    end
+    choice(-760, -30, 488, DMG, function() return s.botdmg end, function(k) s.botdmg = k; card() end)
+    choice(-760, -30, 616, ZONE, function() return s.zone end, function(k) s.zone = k; card() end)
+    card()
+
+    -- ---------------- right: DISPLAY + SEASON + RULES ----------------
+    section(30, 760, 278, "DISPLAY")
+    toggle(30, 760, 320, "anim", "ANIMATED COLORS")
+    text(v, "SPEED OF THE FLOWING COLOURS (IRIDESCENT, TOP 250)", 16, GREY, 30, 760, 380, 398, LEFT, true)
+    choice(30, 760, 404, { T("SLOW"), T("NORMAL"), T("FAST") }, function() return s.speed end, function(k) s.speed = k end)
+    text(v, "RANKING SIZE (PLAYERS IN THE RANKING PAGE)", 16, GREY, 30, 760, 474, 492, LEFT, true)
+    local sizes = {}
+    for k, sz in ipairs(BOARD_SIZES) do sizes[k] = tostring(sz) end
+    choice(30, 760, 498, sizes, function()
+        for k, sz in ipairs(BOARD_SIZES) do if sz == s.board then return k end end
+        return 0
+    end, function(k) s.board = BOARD_SIZES[k]; entries = nil end, 3)
+
+    section(30, 760, 634, "SEASON", T("EVERY %s DAYS", SEASON_DAYS))
     local armed = 0
-    setting(6, "NEW SEASON (RESET SR)", "BACK TO BRONZE I WITH 0 SR. CLICK TWICE TO CONFIRM", function() return armed > 0 and AMBER or RED end, function(lbl)
+    local lamp = box(v, RED, 1, 30, 36, 676, 724)
+    pageButton(5, "NEW SEASON (RESET SR)", 44, 760, 676, 724, function(lbl)
         local now = os.clock()
         if now - armed > 4 then
-            armed = now; lbl("CLICK AGAIN TO CONFIRM")
+            armed = now; lbl("CLICK AGAIN TO CONFIRM"); pcall(lamp.SetRGB, lamp, AMBER, 150)
         else
-            armed = 0
+            armed = 0; pcall(lamp.SetRGB, lamp, RED, 150)
             local ok, season = newSeason()
             if ok then lbl(T("SEASON %s STARTED: SR 0", season)) else lbl("RESET FAILED") end
         end
     end)
+    text(v, "BACK TO BRONZE I WITH 0 SR. CLICK TWICE TO CONFIRM", 15, GREY, 30, 760, 730, 748, LEFT)
+
+    section(30, 760, 760, "RULES")
     local rules = {
-        { "KILLS", "+10 SR PER KILL, MORE IN BRONZE (x3), SILVER (x2.2) AND GOLD (x1.4)." },
-        { "DEATHS", "-20 SR PER DEATH: x0.25 IN BRONZE UP TO x3.3 IN TOP 250." },
-        { "SPEED", "BRONZE AND SILVER GO FAST, GOLD A BIT LESS. FROM PLATINUM IT GETS HARD." },
-        { "ENTRY COST", "PAID AT THE START (QUIT = LOST): 0 / 10 / 30 / 70 / 120 / 160 / 200 / 260." },
-        { "MIN KILLS", "UNDER IT KILLS GIVE NOTHING: PLATINUM 5, DIAMOND 20, CRIMSON 35, IRIDESCENT 40, TOP 250 50." },
-        { "MODE", "RANKED COUNTS ONLY IN RESURGENCE QUADS." },
-        { "STEPS", "EACH DIVISION HAS 3 STEPS (I, II, III). TOP 250 STARTS AT 17000 SR." },
-        { "RP", "RANKED POINTS: 3 PER KILL, +1 PER 8 SR WON, +100 PER RANK UP, WIN STREAK +10% (MAX +50%)." },
-        { "SEASON", T("EVERY %s DAYS. NEW SEASON = SR BACK TO 0.", SEASON_DAYS) },
-        { "QUESTS", "3 DAILY QUESTS GIVE SR AND RP. CLAIM THEM IN THE QUESTS PAGE." },
+        { "KILLS", "KO +5, ELIMINATION +5, ASSIST +3 SR. x3 BRONZE, x2.2 SILVER, x1.4 GOLD" },
+        { "DEATHS", "-20 SR PER DEATH: x0.15 BRONZE, x0.3 SILVER, x0.55 GOLD, x0.9 PLAT, UP TO x3.3" },
+        { "SPEED", "BRONZE TO DIAMOND GO WELL. FROM CRIMSON IT GETS HARD" },
+        { "ENTRY", "SILVER 20-30, GOLD 35-45, PLAT 50-60, DIAM 75-95, CRIM 130-140, IRID 170-200, T250 270" },
+        { "MIN KILLS", "PLAT 3, DIAMOND 12, CRIMSON 35, IRIDESCENT 40, TOP 250 50" },
+        { "MODE", "ONLY THE RESURGENCE RANKED WARZONE PLAYLIST COUNTS" },
+        { "STEPS", "3 STEPS PER DIVISION (I, II, III). TOP 250 FROM 17000 SR" },
+        { "RP", "3 PER KILL, +1 PER 8 SR, +100 PER RANK UP, STREAK UP TO +50%" },
+        { "QUESTS", "DAILY AND SEASON QUESTS GIVE SR AND RP" },
     }
     for k, r in ipairs(rules) do
-        local t = 300 + (k - 1) * 66
-        text(v, r[1], 18, rank.color, 30, 220, t, t + 24, LEFT, true)
-        text(v, r[2], 15, WHITE, 220, 770, t + 2, t + 24, LEFT)
-        box(v, LINE, 1, 30, 770, t + 50, t + 51)
+        local t = 798 + (k - 1) * 20
+        text(v, r[1], 13, rank.color, 30, 160, t, t + 18, LEFT, true)
+        text(v, r[2], 13, WHITE, 160, 760, t, t + 18, LEFT)
+    end
     end
 
     -- ================================================================

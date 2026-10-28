@@ -446,7 +446,7 @@ if type(MenuBuilder) == "table" and type(MenuBuilder.BuildRegisteredType) == "fu
                 result:addElement(watch)
                 watch:registerEventHandler("br95_sr_tick", function()
                     if G.updateTracker then
-                        local ok, err = pcall(G.updateTracker, nil)
+                        local ok, err = pcall(G.updateTracker, nil, result)
                         if not ok and not G.toldError then G.toldError = true; glog("tracker update error " .. tostring(err)) end
                     end
                 end)
@@ -555,22 +555,40 @@ do
             child = nextChild
         end
     end
-    local function setNumbers(el, value, depth)
-        if not el or depth > 6 then return end
-        pcall(function()
+    -- The number of the tracker is written again by the game (its data subscription
+    -- sets 0 every time): the number text keeps a setText of ours that always puts
+    -- our value instead of a number. Texts that are not numbers stay as they are.
+    -- the text of the tracker's "Count" comes back as a game string (not a Lua
+    -- string): compared through tostring
+    local function isNumber(t)
+        if t == nil then return true end
+        local s = tostring(t)
+        return s == "" or s:match("^[%+%-]?%d+$") ~= nil
+    end
+    local function setNumbers(el, value, depth, report)
+        if not el or depth > 8 then return end
+        local ok, err = pcall(function()
             if not el.setText then return end
-            if el.getText then
-                local t = el:getText()
-                if type(t) == "string" and t:match("^[%+%-]?%d+$") then el:setText(value) end
-            else
-                -- no way to read the text back: the tracker's texts are its numbers
-                el:setText(value)
+            if not el._br95Claimed then
+                local t
+                if el.getText then pcall(function() t = el:getText() end) end
+                if tostring(el.id) ~= "Count" and not isNumber(t) then return end
+                el._br95Claimed = true
+                local original = el.setText
+                el._br95SetText = original
+                el.setText = function(self, s, ...)
+                    if G.srText and isNumber(s) then s = G.srText end
+                    return original(self, s, ...)
+                end
+                if report then report[#report + 1] = tostring(el.id) .. " '" .. tostring(t) .. "'" end
             end
+            el._br95SetText(el, value)
         end)
+        if not ok and report then report[#report + 1] = "error " .. tostring(err) end
         local child
         pcall(function() child = el:getFirstChild() end)
         while child do
-            setNumbers(child, value, depth + 1)
+            setNumbers(child, value, depth + 1, report)
             local nextChild
             pcall(function() nextChild = child:getNextSibling() end)
             child = nextChild
@@ -586,11 +604,54 @@ do
         if active ~= "1" then return nil end
         return tonumber(delta)
     end
-    G.updateTracker = function(root)
+    G.updateTracker = function(root, own)
         if not inMatch() then return end
         local delta = liveDelta()
         if delta == nil then return end
         if not G.toldValue then G.toldValue = true; glog("SR tracker value " .. tostring(delta)) end
+        G.srText = (delta > 0 and "+" or "") .. delta
+        -- each tracker built updates itself (the HUD can build more than one)
+        if own then
+            local report = not own._br95Reported and {} or nil
+            own._br95Reported = true
+            setNumbers(own, G.srText, 0, report)
+            if report then
+                -- what the tracker is made of (ids, kinds, texts, sizes), to find its number
+                local out = {}
+                local function walk(el, depth)
+                    if not el or depth > 10 then return end
+                    local id, t, kind, rect = "", "", "", ""
+                    pcall(function() id = tostring(el.id) end)
+                    pcall(function() if el.getText then t = tostring(el:getText()) end end)
+                    kind = (el.setText and "text" or "") .. (el.setImage and "image" or "") .. (el._br95Claimed and " claimed" or "")
+                    pcall(function() rect = table.concat({ el:getLocalRect() }, ",") end)
+                    local tt = ""
+                    pcall(function() if el.getText then tt = type(el:getText()) end end)
+                    out[#out + 1] = string.rep("  ", depth) .. id .. " [" .. kind .. "] '" .. t .. "' (" .. tt .. ") " .. rect
+                    local child
+                    pcall(function() child = el:getFirstChild() end)
+                    while child do
+                        walk(child, depth + 1)
+                        local nextChild
+                        pcall(function() nextChild = child:getNextSibling() end)
+                        child = nextChild
+                    end
+                end
+                walk(own, 0)
+                local fields = {}
+                pcall(function() for k, x in pairs(own) do fields[#fields + 1] = tostring(k) .. ":" .. type(x) end end)
+                pcall(function()
+                    local f = io.open("jupiter/IO/br95_srtracker.txt", "a")
+                    if f then
+                        f:write(os.date("%H:%M:%S") .. " claimed now: " .. table.concat(report, ", ") .. " -> " .. G.srText
+                            .. " | same as G.tracker: " .. tostring(own == G.tracker) .. "\n" .. table.concat(out, "\n")
+                            .. "\nfields: " .. table.concat(fields, " ") .. "\n\n")
+                        f:close()
+                    end
+                end)
+            end
+            return
+        end
         if not G.tracker and root then
             G.tracker = findById(root, "BRSRMatchStatTracker", 0)
             if G.tracker and not G.toldTracker then G.toldTracker = true; glog("SR tracker found") end
@@ -619,7 +680,7 @@ do
             pcall(function() for k, x in pairs(G.tracker) do fields[#fields + 1] = tostring(k) .. ":" .. type(x) end end)
             glog("tracker tree:\n" .. table.concat(out, "\n") .. "\ntracker fields: " .. table.concat(fields, " "))
         end
-        if G.tracker then setNumbers(G.tracker, (delta > 0 and "+" or "") .. delta, 0) end
+        if G.tracker then setNumbers(G.tracker, G.srText, 0) end
     end
 
     -- the values the HUD watches (omnvars) while in a match

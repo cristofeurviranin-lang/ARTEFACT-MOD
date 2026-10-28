@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "9dae62d2",
+  "version": "70e33d61",
   "clients": [
     {
       "id": "lumen",
@@ -104,9 +104,9 @@
     {
       "id": "br95_ranked_v1",
       "client": "lumen",
-      "title": "BR95 RANKED V2 0.2 (Warzone)",
-      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: new playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD in match, bots ranked around you. Challenges & Rewards: the real ranked camos unlocked by reaching a division each season + ranked challenges per division. RANKED tab: daily quests, 200 season quests, stats and charts, ranking of 200 to 5000 players, 7 languages. Fast climb in Bronze/Silver/Gold, harder from Platinum.",
-      "version": "21c49462",
+      "title": "BR95 RANKED V2 0.3 (Warzone)",
+      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: new playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD in match, bots ranked around you. Challenges & Rewards: the real ranked camos unlocked by reaching a division each season + ranked challenges per division. RANKED tab: daily quests, 200 season quests, stats and charts, ranking of 200 to 5000 players, 7 languages. Fast climb in Bronze/Silver/Gold, harder from Platinum. V2 0.3: SR for KO, elimination and assist synced with the game kill counter, official SR counter in match, entry cost per step, easier Platinum/Diamond and softer deaths below Diamond, bot damage and zone settings.",
+      "version": "c7938138",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
@@ -126,22 +126,22 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_official_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_official_post.lua",
-          "sha256": "482dce5de867cdd65a85e6cb91f1bcd869a76286dd04843b4e0a72c60c370f85"
+          "sha256": "c0209817625148515e62155b8d8e1c488827960b4d83a99e858969037c9edbe0"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_playlist_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_playlist_post.lua",
-          "sha256": "b73bbad136816b0564bbdc0b585c04ed221148f88008058ee99458137cb9c340"
+          "sha256": "8d1cfba8f42dd8145efc486bb75d7b56e6553b5879b835872311f9b0baff4fb8"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
-          "sha256": "ff2881c6eaa91ed76bfb885468c2d487927f6c35f151da5e0a564595c64e541d"
+          "sha256": "6753ee8a535c7edfede87584d3394a025c8db94df5344056b451832cd00371f0"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
-          "sha256": "056afbd039fd3d4714455b2042f490a38959b99d23af836561207ca4141f1e51"
+          "sha256": "94ef7ff4a8cc7c0826eb26c579effed239c645209d7d1ec7916d84ec067d23b0"
         }
       ]
     },
@@ -149,13 +149,13 @@
       "id": "br95_smart_bots",
       "client": "lumen",
       "title": "BR95 REALISTIC BOTS (Warzone)",
-      "description": "REALISTIC BOT : every enemy bot stays within 90 m of you, every bot always has a target, instant reaction when shot, fast aim, slides and jumps in fights, infinite ammo with no reload, sprint, no spawning in walls, the lobby never empties. Warzone only.",
-      "version": "54cd87a3",
+      "description": "REALISTIC BOT : every enemy bot stays within 90 m of you, every bot always has a target, instant reaction when shot, fast aim, slides and jumps in fights, infinite ammo with no reload, sprint, no spawning in walls, the lobby never empties. Warzone only. Bot damage (normal / reduced / very reduced) and zone size (90 / 105 / 120 / 150 m) can be set in the RANKED tab SETTINGS.",
+      "version": "7426d31f",
       "files": [
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_smart_bots.gscc",
           "url": "mods/lumen/br95_smart_bots/jupiter/Assets/Scripts/Custom/br/br95_smart_bots.gscc",
-          "sha256": "4af398bf5d4d1f69ae09354ac46eaa55e030d16faa049f6221bc642629e5b8c0"
+          "sha256": "d5b06053e99278a9cbe6f5ac182c66e8d36ee1dc78d8bcc2d3754f1884e3503e"
         }
       ]
     }
