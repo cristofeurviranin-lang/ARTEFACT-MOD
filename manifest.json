@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "e8f858d6",
+  "version": "e4dc3c44",
   "clients": [
     {
       "id": "lumen",
@@ -162,14 +162,14 @@
     {
       "id": "br95_smart_bots",
       "client": "lumen",
-      "title": "BR95 REALISTIC BOTS (Warzone)",
-      "description": "REALISTIC BOT : every enemy bot stays within 90 m of you, every bot always has a target, instant reaction when shot, fast aim, slides and jumps in fights, infinite ammo with no reload, sprint, no spawning in walls, the lobby never empties. Warzone only. Bot damage (normal / reduced / very reduced) and zone size (90 / 105 / 120 / 150 m) can be set in the RANKED tab SETTINGS. v7.9: safer and lighter teleports (one at a time, never a downed bot, never onto a player). v8.3: crash fixes (no teleport while the bot or a squadmate is respawning).",
-      "version": "f8a73d10",
+      "title": "BR95 REALISTIC BOTS V1 FINAL (Warzone)",
+      "description": "FINAL VERSION of the V1 bots. Every enemy bot stays within your zone (90 / 105 / 120 / 150 m), always has a target, reacts instantly when shot, aims fast, slides and jumps in fights, infinite ammo with no reload, sprints, a wave of 3 bots on you every 30 s, no spawning in walls, the lobby never empties, KO limit of 3 s. Safe teleports (crash fixes). Bot level (recruit / easy / normal / hard / extreme) and zone set in the RANKED tab SETTINGS of BR95 RANKED. Warzone only.",
+      "version": "1e5785b2",
       "files": [
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_smart_bots.gscc",
           "url": "mods/lumen/br95_smart_bots/jupiter/Assets/Scripts/Custom/br/br95_smart_bots.gscc",
-          "sha256": "788708a00eb56d6d5f0ff63f63de59a0f6b6eafb56415fef303037c0bfccbd15"
+          "sha256": "ab157be3c309c35494591fc078480f7d3cdf767f9afbe9eb06ce94c91ce88d3e"
         }
       ]
     }
