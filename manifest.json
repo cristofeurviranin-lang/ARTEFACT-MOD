@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "e4dc3c44",
+  "version": "987032bb",
   "clients": [
     {
       "id": "lumen",
@@ -118,9 +118,9 @@
     {
       "id": "br95_ranked_v1",
       "client": "lumen",
-      "title": "BR95 RANKED V2 0.3 (Warzone)",
-      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
-      "version": "f233f46e",
+      "title": "BR95 RANKED V2 0.4 (Warzone)",
+      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.4: BOT LEVEL setting (recruit / easy / normal / hard / extreme) and a new SETTINGS page. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
+      "version": "4e6127c4",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
@@ -150,7 +150,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
-          "sha256": "2a4df38f874b3fc5bf2149582ec06f9684ef26e26355a9bcf761f3e713a9fd74"
+          "sha256": "3a89059d808983db935c35af61701b74ecc81ca62745de40ebf81c746ae5a096"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",

@@ -77,10 +77,11 @@ end
 
 -- ranked: 1 on / 0 off, spawnmsg: rank message at spawn, anim: animated
 -- colors, speed: 1 slow / 2 normal / 3 fast, board: players in the RANKING page
--- botdmg: 1 normal / 2 reduced / 3 very reduced, zone: 1 90 m / 2 105 m / 3 120 m / 4 150 m
+-- botlvl: bot level 1 recruit / 2 easy / 3 normal / 4 hard / 5 extreme (aim, reaction and
+-- damage; botdmg is the old damage setting, kept in the file), zone: 1 90 m / 2 105 m / 3 120 m / 4 150 m
 -- (copied to br95_bots.txt, read by br95_smart_bots.gscc at the start of a match)
 local function loadSettings()
-    local s = { ranked = 1, spawnmsg = 1, anim = 1, speed = 2, board = 1000, lang = 1, botdmg = 1, zone = 1, hud = 1 }
+    local s = { ranked = 1, spawnmsg = 1, anim = 1, speed = 2, board = 1000, lang = 1, botdmg = 1, zone = 1, hud = 1, botlvl = 3 }
     local text = readText(SETTINGS_FILE)
     if text then
         for k, v in text:gmatch("(%a+)=(%d+)") do
@@ -91,10 +92,10 @@ local function loadSettings()
 end
 
 local function saveSettings(s)
-    writeText("jupiter/IO/br95_bots.txt", "BR95B1|dmg=" .. s.botdmg .. "|zone=" .. s.zone .. "|END")
+    writeText("jupiter/IO/br95_bots.txt", "BR95B1|lvl=" .. s.botlvl .. "|zone=" .. s.zone .. "|END")
     return writeText(SETTINGS_FILE, "BR95C1|ranked=" .. s.ranked .. "|spawnmsg=" .. s.spawnmsg
         .. "|anim=" .. s.anim .. "|speed=" .. s.speed .. "|board=" .. s.board .. "|lang=" .. s.lang
-        .. "|botdmg=" .. s.botdmg .. "|zone=" .. s.zone .. "|hud=" .. s.hud .. "|END")
+        .. "|botdmg=" .. s.botdmg .. "|zone=" .. s.zone .. "|hud=" .. s.hud .. "|botlvl=" .. s.botlvl .. "|END")
 end
 
 local function resetRanked()
@@ -1389,75 +1390,42 @@ local function build(menu, controller)
         end
     end
 
-    -- ---------------- left: MATCH + SMART BOTS ----------------
-    section(-760, -30, 278, "MATCH", "APPLIES NEXT MATCH")
-    toggle(-760, -400, 324, "ranked", "RANKED")
-    toggle(-390, -30, 324, "spawnmsg", "RANK AT SPAWN")
-    text(v, "RANKED OFF = MATCHES DO NOT COST OR GIVE SR", 15, GREY, -760, -30, 380, 400, LEFT)
-
-    section(-760, -30, 420, "SMART BOTS", "APPLIES NEXT MATCH")
-    local DMG = { "NORMAL", "REDUCED", "VERY REDUCED" }
-    local DMG_PCT = { "100%", "75%", "45%" }
-    local DMG_HELP = { "THE MOD'S BASE DAMAGE", "BOTS HIT A BIT LESS HARD", "BOTS HIT MUCH LESS HARD" }
+    -- ---------------- left: SMART BOTS (level, zone, next match) + RULES ----------------
+    section(-760, -30, 278, "SMART BOTS", "APPLIES NEXT MATCH")
+    local LEVEL = { "RECRUIT", "EASY", "NORMAL", "HARD", "EXTREME" }
+    local LEVEL_HELP = { "SLOW TO AIM, MISSES A LOT, LOW DAMAGE", "SLOWER AIM AND REACTION, LESS DAMAGE",
+        "THE MOD'S BOTS, AS BEFORE", "SHARPER AIM, FASTER REACTION, MORE DAMAGE", "VERY SHARP AIM, INSTANT REACTION, HIGH DAMAGE" }
+    local LEVEL_STATS = { "REACTION 350 MS  |  DAMAGE x0.9", "REACTION 180 MS  |  DAMAGE x1.6", "REACTION 60 MS  |  DAMAGE x3",
+        "REACTION 40 MS  |  DAMAGE x3.6", "REACTION 25 MS  |  DAMAGE x4.2" }
     local ZONE = { "90 M", "105 M", "120 M", "150 M" }
-    text(v, "BOT DAMAGE", 16, GREY, -760, -30, 462, 482, LEFT, true)
-    local dmgHelp = text(v, DMG_HELP[s.botdmg] or DMG_HELP[1], 15, GREY, -760, -30, 550, 570, LEFT)
-    text(v, "BOT ZONE AROUND YOU", 16, GREY, -760, -30, 590, 610, LEFT, true)
-    text(v, "BOTS STAY AND FIGHT INSIDE THIS RADIUS AROUND YOU", 15, GREY, -760, -30, 678, 698, LEFT)
+    if not LEVEL[s.botlvl] then s.botlvl = 3 end
+    if not ZONE[s.zone] then s.zone = 1 end
+    text(v, "BOT LEVEL", 16, GREY, -760, -30, 320, 338, LEFT, true)
+    local levelHelp = text(v, LEVEL_HELP[s.botlvl], 15, GREY, -760, -30, 472, 490, LEFT)
+    text(v, "BOT ZONE AROUND YOU", 16, GREY, -760, -30, 508, 526, LEFT, true)
 
-    -- live card: what the next match will use
-    box(v, rank.color, 0.10, -760, -30, 720, 964)
-    box(v, rank.color, 1, -760, -30, 720, 722)
-    text(v, "NEXT MATCH", 16, GREY, -740, -50, 734, 754, LEFT, true)
-    text(v, "BOT DAMAGE", 16, GREY, -740, -410, 770, 790, LEFT, true)
-    text(v, "BOT ZONE", 16, GREY, -380, -50, 770, 790, LEFT, true)
-    local dmgBig = text(v, DMG_PCT[s.botdmg] or "100%", 52, WHITE, -740, -410, 796, 852, LEFT, true)
-    local zoneBig = text(v, ZONE[s.zone] or ZONE[1], 52, WHITE, -380, -50, 796, 852, LEFT, true)
-    local dmgName = text(v, DMG[s.botdmg] or DMG[1], 18, rank.color, -740, -410, 860, 884, LEFT, true)
-    local zoneName = text(v, T("%s M RADIUS", ({ 90, 105, 120, 150 })[s.zone] or 90), 18, rank.color, -380, -50, 860, 884, LEFT, true)
-    local dmgMeter = meter(-740, -420, 898, 3)
-    local zoneMeter = meter(-380, -60, 898, 4)
-    text(v, "SAVED AUTOMATICALLY", 14, GREY, -740, -50, 928, 948, LEFT)
+    -- the next match at a glance
+    box(v, rank.color, 0.10, -760, -30, 604, 760)
+    box(v, rank.color, 1, -760, -30, 604, 606)
+    text(v, "NEXT MATCH", 14, GREY, -740, -50, 614, 632, LEFT, true)
+    text(v, "BOT LEVEL", 14, GREY, -740, -410, 638, 654, LEFT, true)
+    text(v, "BOT ZONE", 14, GREY, -380, -50, 638, 654, LEFT, true)
+    local levelBig = text(v, LEVEL[s.botlvl], 36, WHITE, -740, -410, 658, 698, LEFT, true)
+    local zoneBig = text(v, ZONE[s.zone], 36, WHITE, -380, -50, 658, 698, LEFT, true)
+    local levelStats = text(v, LEVEL_STATS[s.botlvl], 14, rank.color, -740, -400, 704, 722, LEFT, true)
+    text(v, "BOTS STAY AROUND YOU", 14, rank.color, -380, -50, 704, 722, LEFT, true)
+    local levelMeter = meter(-740, -420, 734, 5)
+    local zoneMeter = meter(-380, -60, 734, 4)
     local function card()
-        set(dmgBig, DMG_PCT[s.botdmg]); set(dmgName, DMG[s.botdmg]); set(dmgHelp, DMG_HELP[s.botdmg])
-        set(zoneBig, ZONE[s.zone]); set(zoneName, T("%s M RADIUS", ({ 90, 105, 120, 150 })[s.zone]))
-        dmgMeter(4 - s.botdmg); zoneMeter(s.zone)
+        set(levelBig, LEVEL[s.botlvl]); set(levelHelp, LEVEL_HELP[s.botlvl]); set(levelStats, LEVEL_STATS[s.botlvl])
+        set(zoneBig, ZONE[s.zone])
+        levelMeter(s.botlvl); zoneMeter(s.zone)
     end
-    choice(-760, -30, 488, DMG, function() return s.botdmg end, function(k) s.botdmg = k; card() end)
-    choice(-760, -30, 616, ZONE, function() return s.zone end, function(k) s.zone = k; card() end)
+    choice(-760, -30, 344, LEVEL, function() return s.botlvl end, function(k) s.botlvl = k; card() end, 3)
+    choice(-760, -30, 532, ZONE, function() return s.zone end, function(k) s.zone = k; card() end)
     card()
 
-    -- ---------------- right: DISPLAY + SEASON + RULES ----------------
-    section(30, 760, 278, "DISPLAY")
-    toggle(30, 390, 320, "anim", "ANIMATED COLORS")
-    -- the rank panel on the left in a match (br95_ranked_hud_post.lua reads hud=)
-    toggle(400, 760, 320, "hud", "RANKED HUD")
-    text(v, "SPEED OF THE FLOWING COLOURS (IRIDESCENT, TOP 250)", 16, GREY, 30, 760, 380, 398, LEFT, true)
-    choice(30, 760, 404, { T("SLOW"), T("NORMAL"), T("FAST") }, function() return s.speed end, function(k) s.speed = k end)
-    text(v, "RANKING SIZE (PLAYERS IN THE RANKING PAGE)", 16, GREY, 30, 760, 474, 492, LEFT, true)
-    local sizes = {}
-    for k, sz in ipairs(BOARD_SIZES) do sizes[k] = tostring(sz) end
-    choice(30, 760, 498, sizes, function()
-        for k, sz in ipairs(BOARD_SIZES) do if sz == s.board then return k end end
-        return 0
-    end, function(k) s.board = BOARD_SIZES[k]; entries = nil end, 3)
-
-    section(30, 760, 634, "SEASON", T("EVERY %s DAYS", SEASON_DAYS))
-    local armed = 0
-    local lamp = box(v, RED, 1, 30, 36, 676, 724)
-    pageButton(5, "NEW SEASON (RESET SR)", 44, 760, 676, 724, function(lbl)
-        local now = os.clock()
-        if now - armed > 4 then
-            armed = now; lbl("CLICK AGAIN TO CONFIRM"); pcall(lamp.SetRGB, lamp, AMBER, 150)
-        else
-            armed = 0; pcall(lamp.SetRGB, lamp, RED, 150)
-            local ok, season = newSeason()
-            if ok then lbl(T("SEASON %s STARTED: SR 0", season)) else lbl("RESET FAILED") end
-        end
-    end)
-    text(v, "BACK TO BRONZE I WITH 0 SR. CLICK TWICE TO CONFIRM", 15, GREY, 30, 760, 730, 748, LEFT)
-
-    section(30, 760, 760, "RULES")
+    section(-760, -30, 776, "RULES")
     local rules = {
         { "KILLS", "KO +5, ELIMINATION +5, ASSIST +3 SR. x3 BRONZE, x2.2 SILVER, x1.4 GOLD" },
         { "DEATHS", "DEATH FEE: BRONZE FREE, SILVER -2, GOLD -3, PLAT -4, DIAM -5, CRIM -7, IRID/T250 -10" },
@@ -1470,10 +1438,46 @@ local function build(menu, controller)
         { "QUESTS", "DAILY AND SEASON QUESTS GIVE SR AND RP" },
     }
     for k, r in ipairs(rules) do
-        local t = 798 + (k - 1) * 20
-        text(v, r[1], 13, rank.color, 30, 160, t, t + 18, LEFT, true)
-        text(v, r[2], 13, WHITE, 160, 760, t, t + 18, LEFT)
+        local t = 812 + (k - 1) * 19
+        text(v, r[1], 13, rank.color, -760, -630, t, t + 17, LEFT, true)
+        text(v, r[2], 12, WHITE, -630, -30, t + 1, t + 17, LEFT)
     end
+
+    -- ---------------- right: MATCH + DISPLAY + SEASON ----------------
+    section(30, 760, 278, "MATCH", "APPLIES NEXT MATCH")
+    toggle(30, 390, 320, "ranked", "RANKED")
+    toggle(400, 760, 320, "spawnmsg", "RANK AT SPAWN")
+    text(v, "RANKED OFF = MATCHES DO NOT COST OR GIVE SR", 14, GREY, 30, 760, 372, 388, LEFT)
+
+    section(30, 760, 398, "DISPLAY")
+    toggle(30, 390, 440, "anim", "ANIMATED COLORS")
+    -- the rank panel on the left in a match (br95_ranked_hud_post.lua reads hud=)
+    toggle(400, 760, 440, "hud", "RANKED HUD")
+    text(v, "SPEED OF THE FLOWING COLOURS (IRIDESCENT, TOP 250)", 15, GREY, 30, 760, 498, 514, LEFT, true)
+    choice(30, 760, 518, { T("SLOW"), T("NORMAL"), T("FAST") }, function() return s.speed end, function(k) s.speed = k end)
+    text(v, "RANKING SIZE (PLAYERS IN THE RANKING PAGE)", 15, GREY, 30, 760, 588, 604, LEFT, true)
+    local sizes = {}
+    for k, sz in ipairs(BOARD_SIZES) do sizes[k] = tostring(sz) end
+    choice(30, 760, 608, sizes, function()
+        for k, sz in ipairs(BOARD_SIZES) do if sz == s.board then return k end end
+        return 0
+    end, function(k) s.board = BOARD_SIZES[k]; entries = nil end, 3)
+
+    section(30, 760, 748, "SEASON", T("EVERY %s DAYS", SEASON_DAYS))
+    local armed = 0
+    local lamp = box(v, RED, 1, 30, 36, 790, 838)
+    pageButton(5, "NEW SEASON (RESET SR)", 44, 760, 790, 838, function(lbl)
+        local now = os.clock()
+        if now - armed > 4 then
+            armed = now; lbl("CLICK AGAIN TO CONFIRM"); pcall(lamp.SetRGB, lamp, AMBER, 150)
+        else
+            armed = 0; pcall(lamp.SetRGB, lamp, RED, 150)
+            local ok, season = newSeason()
+            if ok then lbl(T("SEASON %s STARTED: SR 0", season)) else lbl("RESET FAILED") end
+        end
+    end)
+    text(v, "BACK TO BRONZE I WITH 0 SR. CLICK TWICE TO CONFIRM", 14, GREY, 30, 760, 844, 860, LEFT)
+    text(v, "ALL SETTINGS ARE SAVED AUTOMATICALLY", 14, GREY, 30, 760, 940, 958, LEFT)
     end
 
     -- ================================================================
