@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "5564658c",
+  "version": "e8f858d6",
   "clients": [
     {
       "id": "lumen",
@@ -45,12 +45,12 @@
       "client": "lumen",
       "title": "BETTER WARZONE MENU BR95 0.0",
       "description": "The official horizontal Warzone menu as the first tab PLAY when you start Warzone: one row per map (Ranked Play, Urzikstan, Rebirth Island, Vondel, Fortune's Keep, Hellspawn), one official card per Lumen mode with the official keyart. Pick a card and the lobby opens with that mode. Warzone only: Multiplayer and Zombies are not changed. The Ranked Play card needs BR95 RANKED.",
-      "version": "abc50ce3",
+      "version": "d2108d84",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_wzplay_post.lua",
           "url": "mods/lumen/br95_better_warzone_menu/jupiter/Assets/Lua/br95_wzplay_post.lua",
-          "sha256": "e3a88909957a12cf428ced0e54d50ae3e5ff2c2dac139ab435900a7ea3819cf9"
+          "sha256": "c822e63f5310ea762a68122bc7d1ebf57ef3bd1916b2644b3d45e48a5786c447"
         }
       ]
     }
@@ -61,7 +61,7 @@
       "client": "lumen",
       "title": "MP LEVEL V1 BR95",
       "description": "Level 1 to 1000 for multiplayer with a new colour every 100 levels, live HUD and result screen, 40-day seasons, WORLD RANKING and MP SHOP. The shop needs the progression mod by @swatcookie. For the world ranking to send your score, also copy BR95Sync.exe from the mod's zip into jupiter/BR95 (the launcher cannot install programs).",
-      "version": "41ec8bd9",
+      "version": "2c07d2db",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_level_hud_post.lua",
@@ -81,12 +81,12 @@
         {
           "path": "jupiter/Assets/Lua/br95_mpshop_post.lua",
           "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_mpshop_post.lua",
-          "sha256": "b0552257f1eda70f38c707b216ec0b7e9b2163645fb741ff20a67defb2b0c1b8"
+          "sha256": "780c03b76f76ebeaf00e5a486dc5d631806a4ccddcf8f42c3a3db6fe989dd569"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_core_post.lua",
           "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_ranked_core_post.lua",
-          "sha256": "621e3b79fe02c49f1da4c82a8ad0a5e3f208eb59a26995c5e3ae00cac582afd6"
+          "sha256": "ced47d27d16b3b2c08e4089a151c93298ec56626a1f5c62028d5aa420a91f2fb"
         },
         {
           "path": "jupiter/Assets/Lua/br95_sync_start_post.lua",
@@ -96,7 +96,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_world_real_post.lua",
           "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_world_real_post.lua",
-          "sha256": "581a973974b87309980f389dc62ab240ddd0703f2b337c86d89d217fa0839b86"
+          "sha256": "405c312f6649653cd647a79a24a2dd45cf6fc0a4c1d88882bfed3348f996643a"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/mp/br95_mp_ranked.gscc",
@@ -120,7 +120,7 @@
       "client": "lumen",
       "title": "BR95 RANKED V2 0.3 (Warzone)",
       "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
-      "version": "c3774519",
+      "version": "f233f46e",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
@@ -140,7 +140,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_official_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_official_post.lua",
-          "sha256": "311ccede6ac52d5fe88d697aa46d5aea0a7e06e936d7a5969435f26603287dd0"
+          "sha256": "30c845095c07258677c90beb1014de96ff4ebd4897d7f845fef5796196f269f2"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_playlist_post.lua",
@@ -155,7 +155,7 @@
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
-          "sha256": "b3b0af2c662d773f82279c08bc2d4316658d9328e9c77bd5efc1002e2de0a146"
+          "sha256": "46c2967caa61a0c136e9127b617b88cb1f31511d0398a4c424a9c0b2beb709a2"
         }
       ]
     },
@@ -163,13 +163,13 @@
       "id": "br95_smart_bots",
       "client": "lumen",
       "title": "BR95 REALISTIC BOTS (Warzone)",
-      "description": "REALISTIC BOT : every enemy bot stays within 90 m of you, every bot always has a target, instant reaction when shot, fast aim, slides and jumps in fights, infinite ammo with no reload, sprint, no spawning in walls, the lobby never empties. Warzone only. Bot damage (normal / reduced / very reduced) and zone size (90 / 105 / 120 / 150 m) can be set in the RANKED tab SETTINGS. v7.9: safer and lighter teleports (one at a time, never a downed bot, never onto a player).",
-      "version": "67fa11a4",
+      "description": "REALISTIC BOT : every enemy bot stays within 90 m of you, every bot always has a target, instant reaction when shot, fast aim, slides and jumps in fights, infinite ammo with no reload, sprint, no spawning in walls, the lobby never empties. Warzone only. Bot damage (normal / reduced / very reduced) and zone size (90 / 105 / 120 / 150 m) can be set in the RANKED tab SETTINGS. v7.9: safer and lighter teleports (one at a time, never a downed bot, never onto a player). v8.3: crash fixes (no teleport while the bot or a squadmate is respawning).",
+      "version": "f8a73d10",
       "files": [
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_smart_bots.gscc",
           "url": "mods/lumen/br95_smart_bots/jupiter/Assets/Scripts/Custom/br/br95_smart_bots.gscc",
-          "sha256": "7db72ea7e2313e57c51b27f67f04a4b514d1d30d9ceecda5575f52e77a66f068"
+          "sha256": "788708a00eb56d6d5f0ff63f63de59a0f6b6eafb56415fef303037c0bfccbd15"
         }
       ]
     }

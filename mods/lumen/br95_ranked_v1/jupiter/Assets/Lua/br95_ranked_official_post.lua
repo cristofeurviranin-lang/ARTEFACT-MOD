@@ -24,45 +24,6 @@ local function log(s)
     end)
 end
 
-local function short(v)
-    local t = type(v)
-    if t == "string" then return '"' .. v:sub(1, 50) .. '"' end
-    if t == "table" then
-        local parts, n = {}, 0
-        for k, x in pairs(v) do
-            n = n + 1
-            if n <= 8 then parts[#parts + 1] = tostring(k) .. "=" .. (type(x) == "table" and "{..}" or tostring(x):sub(1, 30)) end
-        end
-        return "{" .. table.concat(parts, ", ") .. (n > 8 and (", +" .. (n - 8)) or "") .. "}"
-    end
-    return tostring(v)
-end
-
--- log the first 3 calls of each LeaguePlayUtils function while the tab lives
-local function wrapUtils()
-    local LP = rawget(_G, "LeaguePlayUtils")
-    if type(LP) ~= "table" or P.wrapped then return end
-    P.wrapped = true
-    for name, fn in pairs(LP) do
-        if type(fn) == "function" then
-            LP[name] = function(...)
-                local n = (P.calls[name] or 0) + 1
-                P.calls[name] = n
-                local results = { pcall(fn, ...) }
-                if P.active and n <= 3 then
-                    local args = {}
-                    for k = 1, math.min(select("#", ...), 4) do args[#args + 1] = short((select(k, ...))) end
-                    log("LP." .. tostring(name) .. "(" .. table.concat(args, ", ") .. ") -> "
-                        .. (results[1] and short(results[2]) or ("ERROR " .. tostring(results[2]):sub(1, 100))))
-                end
-                if not results[1] then error(results[2], 0) end
-                return select(2, unpack(results))
-            end
-        end
-    end
-end
-
-local TAB = "BR95OfficialRankedTab"
 
 -- our engine's numbers given to the official stat readers:
 -- "sr" (skilldivisions) = our SR, "h_streak" (flamestreak) = win streak, "xp"
@@ -431,7 +392,6 @@ local function install()
         return private
     end)
     P.installed = true
-    if DEBUG then pcall(wrapUtils) end
     log("official ranked lobby installed on the PLAY tab")
     return true
 end
@@ -441,9 +401,17 @@ end
 -- in a match of the ranked playlist
 -- ------------------------------------------------------------------
 local G = {}
+-- The game's conditions (IsRankedMatch ...) call this thousands of times per second in
+-- the menus: the answer is kept 0.25 s (a new closure + engine call each time made the
+-- menus stutter).
+local inMatchAt, inMatchValue = -1, false
+local function askFrontend() return Engine.@InFrontend() end
 local function inMatch()
-    local ok, front = pcall(function() return Engine.@InFrontend() end)
-    return ok and front == false
+    local now = os.clock()
+    if now - inMatchAt < 0.25 then return inMatchValue end
+    local ok, front = pcall(askFrontend)
+    inMatchAt, inMatchValue = now, (ok and front == false)
+    return inMatchValue
 end
 
 -- the official SR tracker (BRSRMatchStatTracker) is caught when it is built; a timer

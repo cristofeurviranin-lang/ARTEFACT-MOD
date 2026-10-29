@@ -179,11 +179,6 @@ local function readWorld()
         fetched = tonumber(fetched), rows = rows, seasonRows = seasonRows,
         seasonTotal = tonumber(seasonTotal), seasonPlace = tonumber(seasonPlace) }
 end
-local function countryName(code)
-    for _, c in ipairs(COUNTRIES) do if c[1] == code then return c[2] end end
-    return code
-end
-
 -- ------------------------------------------------------------------
 -- menu
 -- ------------------------------------------------------------------

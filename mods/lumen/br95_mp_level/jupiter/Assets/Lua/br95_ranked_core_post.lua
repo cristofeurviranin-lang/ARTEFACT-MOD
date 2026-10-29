@@ -23,7 +23,6 @@ local LIVE_FILE = DIR .. "br95_ranked_live.txt"
 local RP_FILE = DIR .. "br95_rp.txt"
 local STREAK_FILE = DIR .. "br95_streak.txt"
 local SETTINGS_FILE = DIR .. "br95_settings.txt"
-local LAST_FILE = DIR .. "br95_core_last.txt"
 
 -- rank rules (1 Bronze, 2 Silver, 3 Platinum, 4 Diamond, 5 Crimson, 6 Iridescent, 7 Painite)
 local START  = { 0, 1000, 2500, 5000, 8000, 12000, 17000 }
@@ -359,9 +358,6 @@ local function finishMatchMP(p)
 end
 
 local function onPacket(p)
-    writeText(LAST_FILE, p.seq .. "|phase " .. p.phase .. "|n " .. p.n .. "|squad kills " .. p.T .. "|squad deaths " .. p.D
-        .. "|alive squads " .. p.alive .. "|ours alive " .. p.ourAlive .. "|own " .. p.pk .. "/" .. p.pd .. "|ranked " .. p.flag
-        .. "|active " .. tostring(state.active) .. "|skipped " .. tostring(state.skipped) .. "|finished " .. tostring(state.finished))
     if state.finished then return end
     if p.phase == 3 then
         if p.flag == 2 then finishMatchMP(p) else finishMatch(p) end

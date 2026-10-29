@@ -48,6 +48,22 @@ local MAPS = {
 local ROW_ORDER = { "RANKED PLAY", "URZIKSTAN", "REBIRTH ISLAND", "VONDEL", "FORTUNE'S KEEP", "HELLSPAWN" }
 
 -- keyart of one preset: the map's art, the mode's own art where the game has one
+-- the small picture of a card (a 2280x1296 layer on every card = 32 big pictures loaded
+-- at once: the menu froze). The big layer stays for the background of the focused card.
+local SMALL = {
+    menu_keyart_wz_plunder_layer00 = "menu_keyart_wz_plunder_button",
+    menu_keyart_wz_br_solos_layer00 = "menu_keyart_wz_br_solos_button",
+    menu_keyart_wz_br_duos_layer00 = "menu_keyart_wz_br_duos_button",
+    menu_keyart_wz_br_trios_layer00 = "menu_keyart_wz_br_trios_button",
+    menu_keyart_wz_br_quads_layer00 = "menu_keyart_wz_br_quads_button",
+    menu_keyart_resurgence_vondel_layer_00 = "button_resurgence_active",
+    menu_keyart_br_vondel_layer_00 = "button_resurgence_active",
+    menu_keyart_wz_big_map_resurgence_layer00 = "button_resurgence",
+    menu_keyart_catedral_hlwn_layer_00 = "menu_keyart_catedral_hlwn_button",
+    menu_keyart_mini_royale_vondel_layer_00 = "menu_keyart_fort_resurgence_button",
+    menu_keyart_rankedplay_01_layer_00 = "menu_keyart_rankedplay_01_button",
+}
+
 local function artFor(map, mode)
     if mode == "plunder" then return "menu_keyart_wz_plunder_layer00" end
     if map == "urzikstan" then
@@ -175,13 +191,14 @@ local function makeCard(template, name, id)
         or (mapKey == "fortunes" and mode:find("resurgence", 1, true) and "jup_icon_mode_wz_fort_resurge")
         or (mode:find("resurgence", 1, true) and "jup_icon_mode_wz_resurge")
         or card.buttonData.icon
-    card.buttonImage = art
-    card.buttonData.image = art
+    local small = SMALL[art] or "menu_keyart_wz_button"
+    card.buttonImage = small
+    card.buttonData.image = small
     card.keyart00 = art
     card.keyart01, card.keyart02 = "", ""
     if type(template.imageLayers) == "table" and type(template.imageLayers[1]) == "table" then
         local layer = {}
-        for k, v in pairs(template.imageLayers[1]) do layer[k] = (v ~= nil and tostring(v) ~= "") and art or v end
+        for k, v in pairs(template.imageLayers[1]) do layer[k] = (v ~= nil and tostring(v) ~= "") and small or v end
         card.imageLayers = { layer }
     end
     card.removeCondition = function() return false end

@@ -139,11 +139,6 @@ local function writeDaily(day, bought)
     return writeText(DAILY_FILE, "BR95D1|" .. day .. "|bought=" .. table.concat(list, ",") .. "|END")
 end
 
-local function countdown()
-    local left = 86400 - now() % 86400
-    return string.format("NEW PACKS IN %dH %02dM", math.floor(left / 3600), math.floor(left % 3600 / 60))
-end
-
 -- ------------------------------------------------------------------
 -- case mod bridge
 -- ------------------------------------------------------------------
@@ -155,13 +150,6 @@ local function caseBridge()
         return nil
     end
     return bridge
-end
-
-local function readCP()
-    local bridge = caseBridge()
-    if not bridge then return nil end
-    local ok, cp = pcall(bridge.getLocalCP)
-    return ok and tonumber(cp) or nil
 end
 
 local function itemName(id)
@@ -210,37 +198,6 @@ end
 -- picture of each daily pack: a real item it can give (skin or blueprint of
 -- the guaranteed rarity, epic for packs without one), different every day
 local VISUAL = { OPERATOR_SKIN = true, OPERATOR = true, WEAPON = true }
-local function packPreviews(day, offers)
-    local previews = {}
-    local bridge = caseBridge()
-    if not bridge or type(bridge.caseOdds) ~= "function" or type(LOOT) ~= "table"
-        or type(LOOT.GetItemImageByID) ~= "function" then
-        return previews
-    end
-    local ok, rows = pcall(bridge.caseOdds)
-    if not ok or type(rows) ~= "table" then return previews end
-    local used = {}
-    for slot, offer in ipairs(offers) do
-        local minQuality = offer.pack.min or 3
-        local candidates = {}
-        for _, row in ipairs(rows) do
-            local item = row.item
-            if item and VISUAL[item.kind] and (tonumber(item.quality) or 0) >= minQuality and not used[item.id] then
-                candidates[#candidates + 1] = item
-            end
-        end
-        if #candidates > 0 then
-            local item = candidates[(day * 31 + slot * 977) % #candidates + 1]
-            local good, image = pcall(LOOT.GetItemImageByID, item.id)
-            if good and type(image) == "string" and image ~= "" then
-                used[item.id] = true
-                previews[slot] = { image = image, name = itemName(item.id), quality = tonumber(item.quality) or 0 }
-            end
-        end
-    end
-    return previews
-end
-
 -- ------------------------------------------------------------------
 -- backgrounds: a loading screen behind the page, a calling card banner on
 -- each daily pack, both from the game catalog and different every day
@@ -468,16 +425,6 @@ local function reelPictures()
         if image then images[#images + 1] = { image = image, quality = tonumber(item.quality) or 0 } end
     end
     return images
-end
-
-local function itemQuality(bridge, id)
-    local ok, rows = pcall(bridge.caseOdds)
-    if ok and type(rows) == "table" then
-        for _, row in ipairs(rows) do
-            if row.item and row.item.id == id then return tonumber(row.item.quality) or 0 end
-        end
-    end
-    return 0
 end
 
 -- returns the drop, or nil + message. Nothing is paid unless the free dry run
