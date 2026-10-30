@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "c4191753",
+  "version": "efee64a5",
   "clients": [
     {
       "id": "lumen",
@@ -119,13 +119,13 @@
       "id": "br95_ranked_v1",
       "client": "lumen",
       "title": "BR95 RANKED V2 0.5 (Warzone)",
-      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.5: ranked works for your friends too in the same match (Radmin / LAN): each player gets his own SR with his own rank. V2 0.4: BOT LEVEL setting (recruit / easy / normal / hard / extreme) and a new SETTINGS page. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
-      "version": "47a8c31e",
+      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.5: ranked works for your friends too in the same match (Radmin / LAN): each player gets his own SR with his own rank. Fix: Crimson, Iridescent and Top 250 can be climbed again (minimum kills 5 / 15 / 25). V2 0.4: BOT LEVEL setting (recruit / easy / normal / hard / extreme) and a new SETTINGS page. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
+      "version": "3aab02c8",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_client_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_client_post.lua",
-          "sha256": "a017806c90496874cc68457e9619853213340aa28ba8af14ee745804b5717127"
+          "sha256": "14625422fad320cc9525e74b6296a5ec631c0ef31b51e5bb5739802b07f877d0"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
@@ -160,7 +160,7 @@
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
-          "sha256": "28867be171d0c23aff3b01d10754e311a36e8887f6ccd886127bb320c5a065a6"
+          "sha256": "e89b2604627ecbdc8bfc78dc722a836abc860cb4fd58116fe8862c7d1a174957"
         }
       ]
     },

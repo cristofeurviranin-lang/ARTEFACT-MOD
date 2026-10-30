@@ -26,9 +26,9 @@ local FLAG = 3
 
 -- rules of br95_ranked.gscc (division 0 Bronze .. 7 Top 250)
 local START = { 0, 1000, 2000, 3500, 5000, 8000, 12000, 17000 }
-local GAIN = { 300, 220, 140, 110, 85, 46, 50, 52 }
-local MIN_KILLS = { 0, 0, 0, 3, 12, 35, 40, 50 }
-local CAP = { 900, 750, 550, 400, 340, 260, 280, 320 }
+local GAIN = { 300, 220, 140, 110, 85, 100, 150, 150 }
+local MIN_KILLS = { 0, 0, 0, 3, 12, 5, 15, 25 }
+local CAP = { 900, 750, 550, 400, 340, 450, 700, 700 }
 local DEATH_FEE = { 0, 2, 3, 4, 5, 7, 10, 10 }
 local FEES = { nil, { 10, 14, 18 }, { 23, 28, 33 }, { 39, 45, 51 }, { 60, 70, 80 }, { 90, 100, 110 } }
 local MATCH_MIN = -200
