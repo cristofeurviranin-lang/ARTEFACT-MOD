@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "cc73a6ee",
+  "version": "70583b0d",
   "clients": [
     {
       "id": "lumen",
@@ -120,12 +120,12 @@
       "client": "lumen",
       "title": "BR95 RANKED V2 0.5 (Warzone)",
       "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.5: ranked works for your friends too in the same match (Radmin / LAN): each player gets his own SR with his own rank. V2 0.4: BOT LEVEL setting (recruit / easy / normal / hard / extreme) and a new SETTINGS page. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
-      "version": "af1e5ce2",
+      "version": "6ff39fab",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_client_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_client_post.lua",
-          "sha256": "3cbaaed83e720c99bc42ee17661c26ec2be8bf4a33fcded95d6d264d0fd38dfe"
+          "sha256": "a017806c90496874cc68457e9619853213340aa28ba8af14ee745804b5717127"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
@@ -160,7 +160,7 @@
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
-          "sha256": "b4e0942731506a196309bb709feabf96e41c5c4022cab4338b8dc602b3c727e1"
+          "sha256": "9c2dc9a5eacc61698066060aa2fbed8ec63dedf2a1bcadb9efaefe617df1aa12"
         }
       ]
     },

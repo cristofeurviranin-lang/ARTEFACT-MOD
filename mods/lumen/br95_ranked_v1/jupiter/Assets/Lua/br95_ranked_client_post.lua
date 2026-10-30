@@ -240,6 +240,15 @@ local function attach(root)
     watch:addElement(LUI.UITimer.new({ interval = 500, event = "br95_client_tick", disposable = false, eventTarget = watch }))
 end
 
+-- the Lumen user name of THIS PC (jupiter/settings.json "username") for
+-- br95_ranked.gscc: on the host it tells which player of the match is the host
+-- (the others are friends), file jupiter/IO/br95_local.txt = BR95U1|name|END
+pcall(function()
+    local text = readText("jupiter/settings.json")
+    local name = text and text:match('"username"%s*:%s*"([^"]+)"')
+    if name and name ~= "" then writeText(DIR .. "br95_local.txt", "BR95U1|" .. name .. "|END") end
+end)
+
 if LUI and LUI.UIRoot and type(LUI.UIRoot.init) == "function" then
     local original = LUI.UIRoot.init
     LUI.UIRoot.init = function(root, ...)
