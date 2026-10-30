@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "987032bb",
+  "version": "5daf00fc",
   "clients": [
     {
       "id": "lumen",
@@ -61,7 +61,7 @@
       "client": "lumen",
       "title": "MP LEVEL V1 BR95",
       "description": "Level 1 to 1000 for multiplayer with a new colour every 100 levels, live HUD and result screen, 40-day seasons, WORLD RANKING and MP SHOP. The shop needs the progression mod by @swatcookie. For the world ranking to send your score, also copy BR95Sync.exe from the mod's zip into jupiter/BR95 (the launcher cannot install programs).",
-      "version": "2c07d2db",
+      "version": "3b81bd17",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_level_hud_post.lua",
@@ -86,7 +86,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_core_post.lua",
           "url": "mods/lumen/br95_mp_level/jupiter/Assets/Lua/br95_ranked_core_post.lua",
-          "sha256": "ced47d27d16b3b2c08e4089a151c93298ec56626a1f5c62028d5aa420a91f2fb"
+          "sha256": "750f7cb3df8ab073545d660839693436b309663a4b3c3a3ed37455a595771e19"
         },
         {
           "path": "jupiter/Assets/Lua/br95_sync_start_post.lua",
@@ -118,10 +118,15 @@
     {
       "id": "br95_ranked_v1",
       "client": "lumen",
-      "title": "BR95 RANKED V2 0.4 (Warzone)",
-      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.4: BOT LEVEL setting (recruit / easy / normal / hard / extreme) and a new SETTINGS page. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
-      "version": "4e6127c4",
+      "title": "BR95 RANKED V2 0.5 (Warzone)",
+      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.5: ranked works for your friends too in the same match (Radmin / LAN): each player gets his own SR with his own rank. V2 0.4: BOT LEVEL setting (recruit / easy / normal / hard / extreme) and a new SETTINGS page. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
+      "version": "7048d2bd",
       "files": [
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_client_post.lua",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_client_post.lua",
+          "sha256": "3cbaaed83e720c99bc42ee17661c26ec2be8bf4a33fcded95d6d264d0fd38dfe"
+        },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_hud_post.lua",
@@ -155,7 +160,7 @@
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
-          "sha256": "46c2967caa61a0c136e9127b617b88cb1f31511d0398a4c424a9c0b2beb709a2"
+          "sha256": "3edd91526317f36c57fee7b1f16e1c693d3dc04c21c690f1aafe5335ec1deeb8"
         }
       ]
     },

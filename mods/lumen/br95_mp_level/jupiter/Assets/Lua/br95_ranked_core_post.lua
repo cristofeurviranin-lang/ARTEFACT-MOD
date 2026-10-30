@@ -358,6 +358,8 @@ local function finishMatchMP(p)
 end
 
 local function onPacket(p)
+    -- flag 3 = Warzone ranked of a friend: handled by br95_ranked_client_post.lua
+    if p.flag == 3 then return end
     if state.finished then return end
     if p.phase == 3 then
         if p.flag == 2 then finishMatchMP(p) else finishMatch(p) end
