@@ -23,8 +23,15 @@ local MODE_FILE = "jupiter/IO/br95_mode.txt"
 
 -- Lumen's presets (name, preset id). The ranked playlist is Rebirth Resurgence quads (id 4)
 -- with br95_mode.txt = 1.
+-- Halloween event 31/10/2026 -> 05/11/2026 (00:00 France): ranked on Hellspawn quads (id 38)
+local EVENT_ON = (function()
+    local now = os.time()
+    return now >= 1793401200 and now < 1793833200
+end)()
+local RANKED_MAP = EVENT_ON and "hellspawn" or "rebirth"
+local RANKED_SOURCE = RANKED_MAP .. "_resurgence_quads"
 local PRESETS = {
-    { RANKED_NAME, 4 },
+    { RANKED_NAME, EVENT_ON and 38 or 4 },
     { "urzikstan_solos", 103 }, { "urzikstan_duos", 104 }, { "urzikstan_trios", 105 }, { "urzikstan_quads", 106 },
     { "urzikstan_mini", 18 }, { "urzikstan_plunder", 17 }, { "urzikstan_mutation_quads", 47 },
     { "rebirth_resurgence_solos", 1 }, { "rebirth_resurgence_duos", 2 }, { "rebirth_resurgence_trios", 3 },
@@ -169,7 +176,7 @@ local MODE_WORDS = { solos = "SOLOS", duos = "DUOS", trios = "TRIOS", quads = "Q
 local function makeCard(template, name, id)
     local ranked = name == RANKED_NAME
     local mapKey, mode = name:match("^(%a+)_(.+)$")
-    if ranked then mapKey, mode = "rebirth", "resurgence_quads" end
+    if ranked then mapKey, mode = RANKED_MAP, "resurgence_quads" end
     local map = MAPS[mapKey or ""]
     if not map then return nil end
     local title = ranked and name or mode:gsub("_", " "):upper()
@@ -182,7 +189,7 @@ local function makeCard(template, name, id)
     card.markLocalized = false
     card.playlistName = title
     card.playlistMode = map.row
-    card.playlistDesc = ranked and "Ranked Play on Rebirth Island, quads. Win SR and climb from Bronze to Top 250."
+    card.playlistDesc = ranked and "Ranked Play on " .. (EVENT_ON and "Hellspawn" or "Rebirth Island") .. ", quads. Win SR and climb from Bronze to Top 250."
         or (map.row .. " - " .. title)
     card.playlistRef = "br95_" .. tostring(id)
     card.buttonData.header = title
@@ -202,7 +209,7 @@ local function makeCard(template, name, id)
         card.imageLayers = { layer }
     end
     card.removeCondition = function() return false end
-    card.buttonAction = function() launch(ranked and "rebirth_resurgence_quads" or name, id, mapKey, ranked) end
+    card.buttonAction = function() launch(ranked and RANKED_SOURCE or name, id, mapKey, ranked) end
     card.br95Row = ranked and "RANKED PLAY" or map.row
     return card
 end
