@@ -389,6 +389,54 @@ local function install()
             title:setText(text)
             private:addElement(title)
         end)
+        -- Halloween event (31/10/2026 -> 05/11/2026 00:00 France): the ranked map is
+        -- Hellspawn (br95_ranked_playlist_post.lua); event card top right, live countdown
+        pcall(function()
+            local EVENT_END = 1793833200
+            if os.time() >= EVENT_END or os.time() < 1793401200 then return end
+            local card = LUI.UIElement.new(); card.id = "BR95HellspawnEvent"
+            card:SetAnchorsAndPosition(0, 1, 0, 1, 1420, 1832, 136, 500)
+            private:addElement(card)
+            local function box(x1, x2, y1, y2, color, alpha)
+                local img = LUI.UIImage.new()
+                img:SetAnchorsAndPosition(0, 1, 0, 1, x1, x2, y1, y2)
+                img:SetRGB(color, 0); img:SetAlpha(alpha, 0)
+                card:addElement(img)
+                return img
+            end
+            local function label(x1, x2, y1, y2, size, color, value)
+                local t = LUI.UIText.new()
+                t:SetAnchorsAndPosition(0, 1, 0, 1, x1, x2, y1, y2)
+                if FONTS and FONTS.GetFont and FONTS.PrimaryBold and FONTS.PrimaryBold.File then
+                    pcall(t.SetFont, t, FONTS.GetFont(FONTS.PrimaryBold.File))
+                end
+                pcall(t.SetFontSize, t, size)
+                if t.SetAlignment and LUI.Alignment then t:SetAlignment(LUI.Alignment.Left) end
+                t:SetRGB(color, 0)
+                t:setText(value)
+                card:addElement(t)
+                return t
+            end
+            box(0, 412, 0, 364, 0x000000, 0.55)
+            box(0, 6, 0, 364, 0xFF6A00, 1)
+            label(18, 400, 10, 40, 28, 0xFF8A1E, "HELLSPAWN EVENT")
+            label(18, 400, 42, 62, 18, 0xFFFFFF, "RANKED PLAY IS ON HELLSPAWN - RESURGENCE QUADS")
+            local art = LUI.UIImage.new()
+            art:SetAnchorsAndPosition(0, 1, 0, 1, 18, 400, 72, 287)
+            art:setImage(RegisterMaterial("menu_keyart_catedral_hlwn_layer_00"), 0)
+            card:addElement(art)
+            label(18, 200, 298, 318, 18, 0xBBBBBB, "EVENT ENDS IN")
+            local count = label(18, 400, 320, 354, 32, 0xFFFFFF, "")
+            local function tick()
+                local left = math.max(0, EVENT_END - os.time())
+                if left == 0 then count:setText("EVENT OVER"); return end
+                count:setText(string.format("%dD %02dH %02dM %02dS", math.floor(left / 86400),
+                    math.floor(left % 86400 / 3600), math.floor(left % 3600 / 60), left % 60))
+            end
+            tick()
+            card:registerEventHandler("br95_event_tick", function() pcall(tick) end)
+            card:addElement(LUI.UITimer.new({ interval = 1000, event = "br95_event_tick", disposable = false, eventTarget = card }))
+        end)
         return private
     end)
     P.installed = true
