@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "ad5ff6fd",
+  "version": "f005340a",
   "clients": [
     {
       "id": "lumen",
@@ -120,7 +120,7 @@
       "client": "lumen",
       "title": "BR95 RANKED V2 0.5 (Warzone)",
       "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.5: ranked works for your friends too in the same match (Radmin / LAN): each player gets his own SR with his own rank. Fix: Crimson, Iridescent and Top 250 can be climbed again (minimum kills 5 / 15 / 25). V2 0.4: BOT LEVEL setting (recruit / easy / normal / hard / extreme) and a new SETTINGS page. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
-      "version": "a83f0671",
+      "version": "e7a2671d",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_client_post.lua",
@@ -160,7 +160,7 @@
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
-          "sha256": "e89b2604627ecbdc8bfc78dc722a836abc860cb4fd58116fe8862c7d1a174957"
+          "sha256": "6091ab7eb8fbf51fb8ebe8c8d3b54cfbc59a2008a3d15f9dbad478265d1223d9"
         }
       ]
     },
