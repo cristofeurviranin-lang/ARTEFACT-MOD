@@ -11,6 +11,14 @@ BR95RankedPlaylist = state
 
 local RANKED_NAME = "RESURGENCE RANKED WARZONE"
 local SOURCE_NAME = "rebirth_resurgence_quads"
+-- Halloween event: from 31/10/2026 to 05/11/2026 (00:00 France) ranked is played
+-- on Hellspawn (Rebirth's Halloween map); Rebirth again after, or if Hellspawn is missing
+local EVENT_NAME = "hellspawn_resurgence_quads"
+local EVENT_START, EVENT_END = 1793401200, 1793833200
+local function eventOn()
+    local now = os.time()
+    return now >= EVENT_START and now < EVENT_END
+end
 local NAME_KEY = "c4bcadba8e631b86"
 local ID_KEY = "8b72e07b55c3ac0"        -- preset id field of a Lumen preset record
 local LAUNCH_KEY = "c730e9e88337bfc4"   -- CLUA function that starts a preset
@@ -47,12 +55,14 @@ end
 -- the ranked copy goes right after the Rebirth Resurgence quads preset
 local function addRanked(list)
     if type(list) ~= "table" then return false end
-    local sourceIndex
+    local sourceIndex, eventIndex
     for i, record in ipairs(list) do
         local name = nameOf(record)
         if name == RANKED_NAME then return true end
         if name == SOURCE_NAME then sourceIndex = i end
+        if name == EVENT_NAME then eventIndex = i end
     end
+    if eventIndex and eventOn() then sourceIndex = eventIndex end
     if not sourceIndex then return false end
     local copy = {}
     local idKey, idValue
