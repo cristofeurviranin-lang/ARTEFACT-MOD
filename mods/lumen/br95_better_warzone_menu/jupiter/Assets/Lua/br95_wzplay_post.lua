@@ -49,7 +49,7 @@ local MAPS = {
     urzikstan = { row = "URZIKSTAN", tab = 0, art = "menu_keyart_wz_br_quads_layer00" },
     vondel    = { row = "VONDEL", tab = 1, art = "menu_keyart_br_vondel_layer_00" },
     rebirth   = { row = "REBIRTH ISLAND", tab = 3, art = "menu_keyart_wz_big_map_resurgence_layer00" },
-    hellspawn = { row = "HELLSPAWN", tab = 4, art = "menu_keyart_catedral_hlwn_layer_00" },
+    hellspawn = { row = "HELLSPAWN", tab = 4, art = "loading_mp_jup_escape5_hell_bg" },
     fortunes  = { row = "FORTUNE'S KEEP", tab = 5, art = "menu_keyart_mini_royale_vondel_layer_00" },
 }
 local ROW_ORDER = { "RANKED PLAY", "URZIKSTAN", "REBIRTH ISLAND", "VONDEL", "FORTUNE'S KEEP", "HELLSPAWN" }
@@ -66,7 +66,8 @@ local SMALL = {
     menu_keyart_resurgence_vondel_layer_00 = "button_resurgence_active",
     menu_keyart_br_vondel_layer_00 = "button_resurgence_active",
     menu_keyart_wz_big_map_resurgence_layer00 = "button_resurgence",
-    menu_keyart_catedral_hlwn_layer_00 = "menu_keyart_catedral_hlwn_button",
+    -- Hellspawn has no keyart: its loading screen (one 2048x1024 picture, shared by its cards)
+    loading_mp_jup_escape5_hell_bg = "loading_mp_jup_escape5_hell_bg",
     menu_keyart_mini_royale_vondel_layer_00 = "menu_keyart_fort_resurgence_button",
     menu_keyart_rankedplay_01_layer_00 = "menu_keyart_rankedplay_01_button",
 }

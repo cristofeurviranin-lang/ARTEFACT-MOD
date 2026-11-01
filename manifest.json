@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "f005340a",
+  "version": "63e63b4c",
   "clients": [
     {
       "id": "lumen",
@@ -45,12 +45,12 @@
       "client": "lumen",
       "title": "BETTER WARZONE MENU BR95 0.0",
       "description": "The official horizontal Warzone menu as the first tab PLAY when you start Warzone: one row per map (Ranked Play, Urzikstan, Rebirth Island, Vondel, Fortune's Keep, Hellspawn), one official card per Lumen mode with the official keyart. Pick a card and the lobby opens with that mode. Warzone only: Multiplayer and Zombies are not changed. The Ranked Play card needs BR95 RANKED.",
-      "version": "b8e19c95",
+      "version": "f2b84096",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_wzplay_post.lua",
           "url": "mods/lumen/br95_better_warzone_menu/jupiter/Assets/Lua/br95_wzplay_post.lua",
-          "sha256": "43f1c6c1fc0b80ea15f40fdf120dfe4482f7488eb85e07ce59b1261f98bf166a"
+          "sha256": "cb876503da1f29ee110889afb41c6b3d7db92269eabc220290afba58f334e5d4"
         }
       ]
     }
@@ -120,7 +120,7 @@
       "client": "lumen",
       "title": "BR95 RANKED V2 0.5 (Warzone)",
       "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.5: ranked works for your friends too in the same match (Radmin / LAN): each player gets his own SR with his own rank. Fix: Crimson, Iridescent and Top 250 can be climbed again (minimum kills 5 / 15 / 25). V2 0.4: BOT LEVEL setting (recruit / easy / normal / hard / extreme) and a new SETTINGS page. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
-      "version": "e7a2671d",
+      "version": "778044d7",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_client_post.lua",
@@ -145,7 +145,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_official_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_official_post.lua",
-          "sha256": "3ea75eba21fa00faefc24c8fcf1ec3b5bd93ecdf1dac150615027d2b5eeb466c"
+          "sha256": "94245305c16a3bb7396f9a34949b6576b606d051bcadd00905a50f25d5878df4"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_playlist_post.lua",
