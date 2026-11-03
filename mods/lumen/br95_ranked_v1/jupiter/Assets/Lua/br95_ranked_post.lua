@@ -38,9 +38,14 @@ local RANKS = {
     { name = "TOP 250",    start = 17000, color = 0xF2C14E, cost = { 120, 295 },      icon = "top250" },
 }
 local IRIS, TOP = 7, 8
-local WHITE, GREY, DIM, BLACK = 0xFFFFFF, 0x9A9A9A, 0x5A5A5A, 0x000000
-local TILE, LINE = 0x101010, 0x2A2A2A
-local GREEN, RED, GOLDC, AMBER, RPC = 0x6BD66B, 0xE04040, 0xF2C14E, 0xFFB347, 0xFFD27A
+-- purple / blue look (0.6): grey texts are lavender, panels purple
+local WHITE, GREY, DIM, BLACK = 0xFFFFFF, 0xC9C0F0, 0x9488D0, 0x000000
+local TILE, LINE = 0x4A30AE, 0x2A1B70
+local GREEN, RED, GOLDC, AMBER, RPC = 0x6BD66B, 0xFF5A6E, 0xF2C14E, 0xFFB347, 0xFFD27A
+-- the other colours of the look in one table (build() may only see 60 outside variables);
+-- DX = the pages are moved right by DX to leave room for the blue column on the left
+local UI = { SIDE = 0x1B2C86, MAIN = 0x3A2690, ROW1 = 0x5639BE, ROW2 = 0x4F34B4, EDGE = 0x7A62E0,
+    OFF = 0x33247F, CYAN = 0x5FD4FF, BRUSH = 0x2F7BFF, ME = 0x2E6B4A, RING = 0x2A3FA8, DX = 160 }
 local ROMAN = { "I", "II", "III" }
 
 local SR_ICON = "iw9_ui_icon_leagueplay_skill_rating"
@@ -573,7 +578,7 @@ local function build(menu, controller)
 
     local function view()
         local v = LUI.UIElement.new()
-        v:SetAnchorsAndPosition(0, 1, 0, 1, 0, 1920, 0, 1080)
+        v:SetAnchorsAndPosition(0, 1, 0, 1, UI.DX, 1920 + UI.DX, 0, 1080)
         root:addElement(v); return v
     end
     local function place(el, l, r, t, b)
@@ -603,9 +608,12 @@ local function build(menu, controller)
         parent:addElement(child); return child
     end
     local function set(el, str) if el then pcall(el.setText, el, T(str)) end end
-    -- panel with a dark body, a thin top line and a title
+    -- panel with a purple body, a light edge, a thin top line and a title
     local function panel(parent, title, l, r, t, b, color)
         box(parent, TILE, 0.82, l, r, t, b)
+        box(parent, UI.EDGE, 0.8, l, r, b - 1, b)
+        box(parent, UI.EDGE, 0.8, l, l + 1, t, b)
+        box(parent, UI.EDGE, 0.8, r - 1, r, t, b)
         box(parent, color or LINE, 1, l, r, t, t + 2)
         if title then text(parent, title, 18, GREY, l + 16, r - 16, t + 10, t + 32, LEFT, true) end
     end
@@ -684,34 +692,173 @@ local function build(menu, controller)
     end
     local function pulse(el, lo, hi) pulses[#pulses + 1] = { el = el, lo = lo, hi = hi }; return el end
 
-    -- backdrop: official key art, darkened (static)
-    image(root, BACK_ART, 0.32, -800, 800, 110, 990)
-    box(root, BLACK, 0.80, -800, 800, 110, 990)
-    accent(box(root, rank.color, 1, -800, 800, 110, 114), 1)
-    box(root, BLACK, 0.5, -800, 800, 114, 244)
-
-    -- header: RANKED PLAY logo, player, rank chip, season, RP
-    local _, logoOk = image(root, seasonLogo(), 1, -790, -550, 120, 240)
-    local nameL = -530
-    if not logoOk then
-        image(root, MODE_ICON, 1, -785, -685, 128, 228)
-        nameL = -670
+    -- ---------------- smooth animations ----------------
+    -- tweens run on their own 16 ms timer (bottom of build) and are timed with the
+    -- clock, not the ticks: same speed whatever the frame rate. A tween calls
+    -- step(e) with e going 0 -> 1 along an easing curve; `fade` fades an element in.
+    local tweens = {}
+    local function easeOut(x) x = 1 - x; return 1 - x * x * x end
+    -- goes a bit past the end and comes back (cards that pop in)
+    local function easeBack(x) x = x - 1; return 1 + 2.2 * x * x * x + 1.2 * x * x end
+    local function tween(delay, dur, ease, step, fade, tag)
+        tweens[#tweens + 1] = { delay = delay, dur = dur, ease = ease, step = step, fade = fade, tag = tag }
+        pcall(step, 0)
+        if fade then pcall(fade.SetAlpha, fade, 0, 0) end
     end
-    text(root, player, 26, WHITE, nameL, -130, 130, 162, LEFT, true)
-    shield(root, nameL + 16, 166, 32, i, list[cur].tier, 1)
-    accent(text(root, stepLabel(list[cur]), 22, rank.color, nameL + 40, nameL + 330, 170, 196, LEFT, true), 2)
-    text(root, percentText(p.sr), 18, WHITE, nameL + 200, nameL + 390, 172, 196, LEFT, true)
+    -- stops the tweens of a tag where they are (page switch, nav mark)
+    local function drop(tag)
+        for k = #tweens, 1, -1 do if tweens[k].tag == tag then table.remove(tweens, k) end end
+    end
+    -- ends every tween at once (safety: if the clock ever stalls nothing stays hidden)
+    local function finishTweens()
+        for k = #tweens, 1, -1 do
+            local tw = tweens[k]
+            pcall(tw.step, 1)
+            if tw.fade then pcall(tw.fade.SetAlpha, tw.fade, 1, 0) end
+            tweens[k] = nil
+        end
+    end
+    -- a full-screen group: its children keep their coordinates, the group moves
+    local function layer(parent)
+        local g = LUI.UIElement.new()
+        g:SetAnchorsAndPosition(0, 1, 0, 1, 0, 1920, 0, 1080)
+        parent:addElement(g); return g
+    end
+    -- a group slides in from (dx, dy) and fades in
+    local function enter(g, delay, dur, dx, dy, ease)
+        tween(delay, dur, ease or easeOut, function(e)
+            local x, y = dx * (1 - e), dy * (1 - e)
+            g:SetAnchorsAndPosition(0, 1, 0, 1, x, 1920 + x, y, 1080 + y)
+        end, g)
+    end
+
+    -- backdrop: the official key art under a purple tint on the right (static) and a
+    -- blue column on the left (rank, SR, page buttons, RP) that slides in
+    image(root, BACK_ART, 0.30, -630, 950, 110, 990)
+    box(root, UI.MAIN, 0.86, -630, 950, 110, 990)
+    accent(box(root, rank.color, 1, -630, 950, 110, 113), 1)
+    local side, hdr = layer(root), layer(root)
+    box(side, UI.SIDE, 0.96, -950, -640, 110, 990)
+    if i == TOP then image(side, TOP_ART, 0.35, -950, -640, 110, 500) end
+    box(side, rank.color, 0.10, -930, -660, 140, 360)
+
+    -- progress in your step (0..1), shown by the ring and the bar of the header
+    local heroPct = nextStep and ((p.sr - list[cur].from) / (nextStep.from - list[cur].from)) or 1
+    heroPct = math.max(0, math.min(1, heroPct))
+
+    -- left column: the shield on a dark disc inside a round ring that fills up with
+    -- the SR. LUI has no arcs: the ring is 150 small discs of the game (white disc
+    -- image, tinted) that overlap, so it reads as one smooth line with round ends.
+    local RX, RY, RR, DOT, RING_N = -795, 250, 92, "hud_reticle_circle_fill", 150
+    -- soft aura in the rank colour behind the disc (4 faint discs), breathing
+    local aura = layer(side)
+    for k = 1, 4 do
+        local s = 96 + k * 9
+        local a = image(aura, DOT, 0.07, RX - s, RX + s, RY - s, RY + s)
+        pcall(a.SetRGB, a, rank.color, 0)
+    end
+    pulse(aura, 0.45, 1)
+    local disc = image(side, DOT, 1, RX - 84, RX + 84, RY - 84, RY + 84)
+    pcall(disc.SetRGB, disc, 0x13206A, 0)
+    local ring, ringLit = {}, 0
+    for k = 1, RING_N do
+        local a = (k - 0.5) / RING_N * 2 * math.pi
+        local x, y = RX + RR * math.sin(a), RY - RR * math.cos(a)
+        local d, ok = image(side, DOT, 1, x - 6, x + 6, y - 6, y + 6)
+        -- no disc image in this game version: small squares instead
+        if not ok then d = box(side, UI.RING, 1, x - 4, x + 4, y - 4, y + 4) end
+        pcall(d.SetRGB, d, UI.RING, 0)
+        ring[k] = d
+    end
+    -- the head of the ring: a glow and a white dot that run with the fill
+    local headGlow = pulse(image(side, DOT, 0.4, RX - 13, RX + 13, RY - RR - 13, RY - RR + 13), 0.2, 0.55)
+    pcall(headGlow.SetRGB, headGlow, rank.color, 0)
+    local headDot = image(side, DOT, 0.95, RX - 7, RX + 7, RY - RR - 7, RY - RR + 7)
+    -- only the discs between the old and the new end change colour
+    local function setRing(pct)
+        pct = math.max(0, math.min(1, pct))
+        local a = pct * 2 * math.pi
+        local x, y = RX + RR * math.sin(a), RY - RR * math.cos(a)
+        place(headGlow, x - 13, x + 13, y - 13, y + 13)
+        place(headDot, x - 7, x + 7, y - 7, y + 7)
+        local n = math.floor(RING_N * pct + 0.5)
+        if n == ringLit then return end
+        for k = math.min(n, ringLit) + 1, math.max(n, ringLit) do
+            pcall(ring[k].SetRGB, ring[k], k <= n and rank.color or UI.RING, 0)
+        end
+        ringLit = n
+    end
+    shield(side, RX, RY - 70, 140, i, list[cur].tier, 1)
+    local pctText = text(side, "0%", 20, UI.CYAN, -945, -645, 350, 374, nil, true)
+    accent(text(side, stepLabel(list[cur]), 26, WHITE, -950, -640, 378, 410, nil, true), 2)
+    -- placed for the final number (centred), then counts up from 0
+    local srText = srValue(side, p.sr, 36, WHITE, RX, 416)
+    set(srText, "0")
+    text(side, T("%s OF PLAYERS", percentText(p.sr)), 16, GREY, -950, -640, 462, 482, nil, true)
+    -- RP chip (bottom of the column)
+    box(side, RPC, 0.12, -935, -655, 930, 972)
+    box(side, RPC, 1, -935, -932, 930, 972)
+    local rpText = rpValue(side, rp, 22, -920, 940)
+
+    -- header: season (cyan), RANKED PLAY logo with a blue brush line, player, next promotion
     local days = math.floor(seasonLeft / 86400)
     local hours = math.floor((seasonLeft % 86400) / 3600)
-    text(root, T("SEASON %s   |   ENDS IN %s", seasonNumber, days .. "D " .. string.format("%02d", hours) .. "H"),
-        16, GREY, nameL, -60, 204, 226, LEFT)
-    -- RP chip (top right, under the page buttons)
-    box(root, RPC, 0.12, 560, 780, 200, 238)
-    box(root, RPC, 1, 560, 563, 200, 238)
-    local rpText = rpValue(root, rp, 22, 574, 207)
+    text(hdr, T("SEASON %s   |   ENDS IN %s", seasonNumber, days .. "D " .. string.format("%02d", hours) .. "H"),
+        16, UI.CYAN, -612, 100, 122, 142, LEFT, true)
+    local _, logoOk = image(hdr, seasonLogo(), 1, -615, -435, 146, 236)
+    if not logoOk then text(hdr, "RANKED PLAY", 44, WHITE, -612, 0, 160, 212, LEFT, true) end
+    -- the brush line draws itself, then its cyan tail appears
+    local brush = box(hdr, UI.BRUSH, 1, -612, -611, 238, 244)
+    local brushTail = box(hdr, UI.CYAN, 1, -466, -440, 239, 243)
+    tween(450, 500, easeOut, function(e) place(brush, -612, -612 + math.max(1, 142 * e), 238, 244) end)
+    tween(850, 300, easeOut, function() end, brushTail)
+    text(hdr, player, 26, WHITE, 300, 930, 120, 152, RIGHT, true)
     if settings.ranked == 0 then
-        text(root, "RANKED OFF: MATCHES DO NOT CHANGE YOUR SR", 16, RED, -120, 310, 210, 232, RIGHT, true)
+        text(hdr, "RANKED OFF: MATCHES DO NOT CHANGE YOUR SR", 16, RED, -400, 400, 214, 236, nil, true)
     end
+
+    -- the SR bar (header, right) is the living part of the screen: it fills up,
+    -- a light runs along the filled part and its tip pulses
+    local BL, BR, BT, BH = 480, 930, 198, 12
+    box(hdr, LINE, 1, BL, BR, BT, BT + BH)
+    for k = 1, 3 do box(hdr, BLACK, 0.6, BL + (BR - BL) * k / 4 - 1, BL + (BR - BL) * k / 4 + 1, BT, BT + BH) end
+    local heroFill = accent(box(hdr, rank.color, 1, BL, BL + 1, BT, BT + BH), 7)
+    local shine = box(hdr, WHITE, 0, BL, BL + 1, BT, BT + BH)
+    local tip = box(hdr, WHITE, 0.8, BL - 3, BL + 3, BT - 4, BT + BH + 4)
+    local heroRight = BL
+    local function setHero(pct)
+        heroRight = BL + math.max(1, (BR - BL) * pct)
+        place(heroFill, BL, heroRight, BT, BT + BH)
+        place(tip, heroRight - 3, heroRight + 3, BT - 4, BT + BH + 4)
+    end
+    if nextStep then
+        shield(hdr, 440, 156, 36, nextStep.idx, nextStep.tier, 1)
+        text(hdr, "NEXT PROMOTION", 16, GREY, 480, 700, 164, 184, LEFT)
+        text(hdr, stepLabel(nextStep), 22, RANKS[nextStep.idx].color, 640, 930, 160, 188, RIGHT, true)
+        text(hdr, list[cur].from .. "", 16, GREY, BL, BL + 150, BT + 16, BT + 36, LEFT)
+        text(hdr, nextStep.from .. "", 16, GREY, BR - 150, BR, BT + 16, BT + 36, RIGHT)
+        text(hdr, T("%s SR TO GO", nextStep.from - p.sr), 18, UI.CYAN, BL + 120, BR - 120, BT + 15, BT + 37, nil, true)
+    else
+        text(hdr, "YOU ARE IN THE TOP 250: CHECK THE RANKING", 18, GOLDC, BL - 100, BR, BT + 16, BT + 38, RIGHT, true)
+    end
+
+    -- opening: the column slides in from the left, the header drops in, then the SR,
+    -- the RP, the ring and the bar count up together (ends with a flash of the SR)
+    enter(side, 0, 520, -80, 0)
+    enter(hdr, 120, 520, 0, -28)
+    local flashed = false
+    tween(400, 1500, easeOut, function(e)
+        set(srText, tostring(math.floor(p.sr * e + 0.5)))
+        set(rpText, math.floor(rp * e + 0.5) .. " RP")
+        set(pctText, math.floor(heroPct * 100 * e + 0.5) .. "%")
+        setHero(heroPct * e)
+        setRing(heroPct * e)
+        if e >= 1 and not flashed then
+            flashed = true
+            pcall(srText.SetRGB, srText, rank.color, 0)
+            pcall(srText.SetRGB, srText, WHITE, 700)
+        end
+    end)
 
     -- pages
     local PAGES = { "OVERVIEW", "QUESTS", "STATS", "RANKING", "SETTINGS", "LANGUAGE", "SEASON QUESTS", "CHALLENGES & REWARDS" }
@@ -726,8 +873,9 @@ local function build(menu, controller)
     local function pageButton(page, label, l, r, t, b, action)
         local btn = MenuBuilder.BuildRegisteredType("GenericButton", { controllerIndex = controller })
         root:addElement(btn)
-        local entry = { btn = btn, l = l, r = r, t = t, b = b }
-        if page == 1 then place(btn, l, r, t, b) else place(btn, l + 6000, r + 6000, t, b) end
+        -- buttons sit on root: moved right by DX like the pages
+        local entry = { btn = btn, l = l + UI.DX, r = r + UI.DX, t = t, b = b }
+        if page == 1 then place(btn, entry.l, entry.r, t, b) else place(btn, entry.l + 6000, entry.r + 6000, t, b) end
         local function label_(str) if btn.Text then pcall(btn.Text.setText, btn.Text, T(str)) end end
         label_(label)
         btn:addEventHandler("button_action", function() if current == page then pcall(action, label_) end end)
@@ -736,49 +884,12 @@ local function build(menu, controller)
     end
 
     -- ================================================================
-    -- OVERVIEW
+    -- OVERVIEW (your shield, SR and progress are in the left column and the header)
     -- ================================================================
     local v = views[1]
-    panel(v, nil, -780, -230, 258, 984, rank.color)
-    box(v, rank.color, 0.12, -690, -320, 280, 650)
-    shield(v, -505, 270, 370, i, list[cur].tier, 1)
-    accent(box(v, rank.color, 1, -735, -275, 650, 696), 4)
-    box(v, BLACK, 0.25, -735, -275, 692, 696)
-    text(v, stepLabel(list[cur]), 32, WHITE, -735, -275, 656, 692, nil, true)
-    local srText = srValue(v, 0, 44, WHITE, -505, 708)
-    text(v, T("%s OF PLAYERS", percentText(p.sr)), 18, GREY, -735, -275, 762, 786, nil, true)
-    -- the SR bar is the living part of the screen: it fills up, a light runs
-    -- along the filled part and its tip pulses
-    local BL, BR, BT, BH = -750, -260, 800, 16
-    box(v, LINE, 1, BL, BR, BT, BT + BH)
-    for k = 1, 3 do box(v, BLACK, 0.6, BL + (BR - BL) * k / 4 - 1, BL + (BR - BL) * k / 4 + 1, BT, BT + BH) end
-    local heroFill = accent(box(v, rank.color, 1, BL, BL + 1, BT, BT + BH), 7)
-    local shine = box(v, WHITE, 0, BL, BL + 1, BT, BT + BH)
-    local tip = box(v, WHITE, 0.8, BL - 3, BL + 3, BT - 4, BT + BH + 4)
-    local heroPct = nextStep and ((p.sr - list[cur].from) / (nextStep.from - list[cur].from)) or 1
-    heroPct = math.max(0, math.min(1, heroPct))
-    local heroRight = BL
-    local function setHero(pct)
-        heroRight = BL + math.max(1, (BR - BL) * pct)
-        place(heroFill, BL, heroRight, BT, BT + BH)
-        place(tip, heroRight - 3, heroRight + 3, BT - 4, BT + BH + 4)
-    end
-    if nextStep then
-        text(v, list[cur].from .. "", 16, GREY, BL, BL + 150, BT + 20, BT + 40, LEFT)
-        text(v, nextStep.from .. "", 16, GREY, BR - 150, BR, BT + 20, BT + 40, RIGHT)
-        text(v, T("%s SR TO GO", nextStep.from - p.sr), 18, WHITE, BL + 150, BR - 150, BT + 18, BT + 42, nil, true)
-        box(v, 0x1A1A1A, 1, -750, -260, 860, 960)
-        shield(v, -705, 868, 84, nextStep.idx, nextStep.tier, 1)
-        text(v, "NEXT PROMOTION", 16, GREY, -650, -270, 874, 894, LEFT)
-        text(v, stepLabel(nextStep), 26, RANKS[nextStep.idx].color, -650, -270, 896, 926, LEFT, true)
-        srValue(v, nextStep.from, 18, GREY, -650, 930, "left")
-    else
-        text(v, "YOU ARE IN THE TOP 250: CHECK THE RANKING", 18, GOLDC, BL, BR, BT + 20, BT + 44, nil, true)
-        image(v, TOP_ART, 0.8, -750, -260, 860, 960)
-    end
 
-    -- division road (right, top): 8 cards in 2 rows
-    panel(v, "DIVISIONS", -210, 780, 258, 494)
+    -- division road (top): the 8 divisions side by side
+    panel(v, "DIVISIONS", -780, 780, 258, 476)
     -- entry cost of your step (same as entry_cost of br95_ranked.gscc)
     do
         local cost
@@ -791,74 +902,88 @@ local function build(menu, controller)
         end
         text(v, T("ENTRY COST %s SR", cost), 16, RED, 300, 764, 268, 290, RIGHT, true)
     end
-    local cw, ch = 990 / 4, 90
+    local cw = 1560 / #RANKS
     for k, r in ipairs(RANKS) do
-        local col, row = (k - 1) % 4, math.floor((k - 1) / 4)
-        local l, t = -210 + col * cw + 8, 298 + row * (ch + 6)
+        local l, t, w = -780 + (k - 1) * cw + 8, 298, cw - 16
         local reached = p.sr >= r.start
         local now = (k == i)
-        local card = box(v, r.color, now and 0.32 or (reached and 0.14 or 0.05), l, l + cw - 16, t, t + ch)
-        if now then pulse(accent(card, 5), 0.22, 0.40) end
+        -- each card is a group that pops in, one after the other
+        local g = layer(v)
+        local card = box(g, r.color, now and 0.32 or (reached and 0.14 or 0.05), l, l + w, t, t + 166)
+        if now then
+            pulse(accent(card, 5), 0.22, 0.40)
+            -- white frame on your division
+            box(g, WHITE, 0.9, l, l + w, t + 164, t + 166)
+            box(g, WHITE, 0.9, l, l + 2, t, t + 166)
+            box(g, WHITE, 0.9, l + w - 2, l + w, t, t + 166)
+        end
         local bars = (k == TOP) and 1 or 3
-        local bw = (cw - 16) / bars
+        local bw = w / bars
         for s = 0, bars - 1 do
             local lit = (k < i) or (now and ((k == TOP) or (list[cur].tier ~= nil and s <= list[cur].tier)))
-            box(v, lit and r.color or 0x3A3A3A, 1, l + s * bw + 1, l + (s + 1) * bw - 1, t, t + 5)
+            box(g, lit and r.color or UI.OFF, 1, l + s * bw + 1, l + (s + 1) * bw - 1, t, t + 5)
         end
-        shield(v, l + 44, t + 12, 70, k, nil, reached and 1 or 0.4)
-        text(v, r.name, 20, reached and WHITE or GREY, l + 92, l + cw - 20, t + 22, t + 46, LEFT, true)
+        text(g, r.name, 20, reached and WHITE or GREY, l, l + w, t + 14, t + 38, nil, true)
+        shield(g, l + w / 2, t + 42, 84, k, nil, reached and 1 or 0.4)
         local top = RANKS[k + 1] and (RANKS[k + 1].start - 1) or nil
-        image(v, SR_ICON, reached and 1 or 0.5, l + 92, l + 112, t + 56, t + 74)
-        text(v, r.start .. (top and (" - " .. top) or "+"), 16, GREY, l + 116, l + cw - 20, t + 55, t + 75, LEFT)
+        image(g, SR_ICON, reached and 1 or 0.5, l + 10, l + 28, t + 137, t + 153)
+        text(g, r.start .. (top and (" - " .. top) or "+"), 16, GREY, l + 32, l + w - 4, t + 135, t + 155, LEFT)
+        enter(g, 250 + k * 70, 560, 0, 40, easeBack)
     end
 
-    -- recent matches (right, middle)
-    panel(v, "RECENT MATCHES", -210, 780, 504, 750)
-    local cols = { { "RESULT", -184 }, { "KILLS", 0 }, { "DEATHS", 110 }, { "SR", 230 }, { "RP", 360 }, { "AFTER", 470 }, { "WHEN", 640 } }
-    for _, c in ipairs(cols) do text(v, c[1], 14, DIM, c[2], c[2] + 130, 534, 552, LEFT) end
+    -- recent matches (middle)
+    panel(v, "RECENT MATCHES", -780, 780, 488, 732)
+    local cols = { { "RESULT", -754 }, { "KILLS", -430 }, { "DEATHS", -250 }, { "SR", -70 }, { "RP", 110 }, { "AFTER", 290 }, { "WHEN", 560 } }
+    for _, c in ipairs(cols) do text(v, c[1], 14, DIM, c[2], c[2] + 160, 518, 536, LEFT) end
     if #history == 0 then
-        text(v, "NO MATCH RECORDED YET: PLAY A RANKED MATCH (RESURGENCE QUADS)", 18, GREY, -184, 764, 600, 626, LEFT)
+        text(v, "NO MATCH RECORDED YET: PLAY A RANKED MATCH (RESURGENCE QUADS)", 18, GREY, -754, 764, 584, 610, LEFT)
     end
     for k = 1, 5 do
         local m = history[#history - k + 1]
         if m then
-            local t = 556 + (k - 1) * 38
+            local t = 540 + (k - 1) * 38
             local win = m.delta > 0
-            box(v, k % 2 == 0 and 0x161616 or 0x1C1C1C, 1, -200, 770, t, t + 34)
-            box(v, win and GREEN or RED, 1, -200, -196, t, t + 34)
-            text(v, win and "WIN" or "LOSS", 18, win and GREEN or RED, -184, -10, t + 7, t + 29, LEFT, true)
-            text(v, tostring(m.kills), 18, WHITE, 0, 100, t + 7, t + 29, LEFT, true)
-            text(v, tostring(m.deaths), 18, WHITE, 110, 220, t + 7, t + 29, LEFT, true)
-            text(v, (m.delta >= 0 and "+" or "") .. m.delta, 18, win and GREEN or RED, 230, 350, t + 7, t + 29, LEFT, true)
-            text(v, m.rp > 0 and ("+" .. m.rp) or "-", 18, RPC, 360, 460, t + 7, t + 29, LEFT, true)
-            srValue(v, m.sr, 16, GREY, 470, t + 8, "left")
+            -- each row slides in from the right
+            local g = layer(v)
+            box(g, k % 2 == 0 and UI.ROW2 or UI.ROW1, 1, -770, 770, t, t + 34)
+            box(g, win and GREEN or RED, 1, -770, -766, t, t + 34)
+            text(g, win and "WIN" or "LOSS", 18, win and GREEN or RED, -754, -450, t + 7, t + 29, LEFT, true)
+            text(g, tostring(m.kills), 18, WHITE, -430, -260, t + 7, t + 29, LEFT, true)
+            text(g, tostring(m.deaths), 18, WHITE, -250, -80, t + 7, t + 29, LEFT, true)
+            text(g, (m.delta >= 0 and "+" or "") .. m.delta, 18, win and GREEN or RED, -70, 100, t + 7, t + 29, LEFT, true)
+            text(g, m.rp > 0 and ("+" .. m.rp) or "-", 18, RPC, 110, 280, t + 7, t + 29, LEFT, true)
+            srValue(g, m.sr, 16, GREY, 290, t + 8, "left")
             local when = ""
             pcall(function() when = os.date("%d/%m %H:%M", m.time) end)
-            text(v, when, 16, GREY, 640, 770, t + 8, t + 28, LEFT)
+            text(g, when, 16, GREY, 560, 770, t + 8, t + 28, LEFT)
+            enter(g, 600 + k * 80, 480, 120, 0)
         end
     end
 
-    -- today's quests (right, bottom)
+    -- today's quests (bottom)
     local quests = dailyQuests(day)
     local today_ = {}
     for _, m in ipairs(history) do if math.floor(m.time / 86400) == day then today_[#today_ + 1] = m end end
     local qs = readQuestState(day)
-    panel(v, "DAILY QUESTS", -210, 780, 760, 984, GOLDC)
+    panel(v, "DAILY QUESTS", -780, 780, 744, 984, GOLDC)
     local left = 86400 - (os.time() % 86400)
     local resetText = math.floor(left / 3600) .. "H " .. string.format("%02d", math.floor((left % 3600) / 60)) .. "M"
-    text(v, T("NEW QUESTS IN %s", resetText), 16, GREY, 300, 764, 770, 792, RIGHT)
+    text(v, T("NEW QUESTS IN %s", resetText), 16, GREY, 300, 764, 754, 776, RIGHT)
     for k, q in ipairs(quests) do
-        local t = 800 + (k - 1) * 58
+        local t = 786 + (k - 1) * 64
         local val = math.min(q.goal, q.value(today_))
         local done = val >= q.goal
-        image(v, STAR_ICON, done and 1 or 0.35, -194, -160, t + 6, t + 40)
-        text(v, q.title, 18, done and GOLDC or WHITE, -150, 200, t + 2, t + 24, LEFT, true)
-        text(v, q.desc, 14, GREY, -150, 400, t + 26, t + 44, LEFT)
-        local fill = bar(v, 410, 640, t + 18, 8, done and GREEN or GOLDC)
-        fill(val / q.goal)
-        text(v, val .. " / " .. q.goal, 16, WHITE, 410, 640, t - 2, t + 16, RIGHT)
+        -- each quest rises in, then its bar fills up
+        local g = layer(v)
+        image(g, STAR_ICON, done and 1 or 0.35, -764, -730, t + 6, t + 40)
+        text(g, q.title, 18, done and GOLDC or WHITE, -716, -100, t + 2, t + 24, LEFT, true)
+        text(g, q.desc, 14, GREY, -716, 260, t + 26, t + 44, LEFT)
+        local fill = bar(g, 300, 620, t + 18, 8, done and GREEN or GOLDC)
+        text(g, val .. " / " .. q.goal, 16, WHITE, 300, 620, t - 2, t + 16, RIGHT)
         local status = (qs.c[k] == 1) and "CLAIMED" or (done and "READY" or ("+" .. q.rp .. " RP"))
-        text(v, status, 16, (qs.c[k] == 1) and DIM or (done and GREEN or RPC), 650, 764, t + 12, t + 32, RIGHT, true)
+        text(g, status, 16, (qs.c[k] == 1) and DIM or (done and GREEN or RPC), 640, 764, t + 12, t + 32, RIGHT, true)
+        enter(g, 1000 + k * 100, 480, 0, 26)
+        tween(1150 + k * 100, 800, easeOut, function(e) fill(val / q.goal * e) end)
     end
 
     -- ================================================================
@@ -874,7 +999,7 @@ local function build(menu, controller)
         local t = 372 + (k - 1) * 150
         local val = math.min(q.goal, q.value(today_))
         local done = val >= q.goal
-        box(v, 0x1A1A1A, 1, -760, 760, t, t + 136)
+        box(v, UI.ROW1, 1, -760, 760, t, t + 136)
         box(v, done and GREEN or GOLDC, 1, -760, -754, t, t + 136)
         if done and qs.c[k] ~= 1 then pulse(box(v, GREEN, 0.10, -754, 760, t, t + 136), 0.04, 0.14) end
         image(v, STAR_ICON, done and 1 or 0.3, -730, -650, t + 28, t + 108)
@@ -905,7 +1030,7 @@ local function build(menu, controller)
         if not questCard(k, q) then allDone = false end
     end
     local bt = 828
-    box(v, 0x1A1A1A, 1, -760, 760, bt, bt + 136)
+    box(v, UI.ROW1, 1, -760, 760, bt, bt + 136)
     box(v, rank.color, 1, -760, -754, bt, bt + 136)
     shield(v, -690, bt + 18, 100, i, list[cur].tier, 1)
     text(v, "DAILY BONUS", 16, GREY, -630, -200, bt + 16, bt + 36, LEFT)
@@ -1040,7 +1165,7 @@ local function build(menu, controller)
     for k = 1, 10 do
         local t = 496 + (k - 1) * 38
         local row = {}
-        row.back = box(v, 0x1A1A1A, 0.85, -770, 770, t, t + 34)
+        row.back = box(v, UI.ROW1, 0.85, -770, 770, t, t + 34)
         row.mark = box(v, GOLDC, 1, -770, -766, t, t + 34)
         row.pos = text(v, "", 20, WHITE, -756, -660, t + 7, t + 29, LEFT, true)
         row.icon = image(v, shieldName(TOP, false), 1, -652, -622, t + 2, t + 32)
@@ -1069,7 +1194,7 @@ local function build(menu, controller)
                 set(row.sr, tostring(e.sr))
                 pcall(row.sr.SetRGB, row.sr, RANKS[d].color, 0)
                 pcall(function() row.icon:setImage(RegisterMaterial(shieldName(d, false)), 0) end)
-                pcall(row.back.SetRGB, row.back, e.me and 0x24402A or 0x1A1A1A, 0)
+                pcall(row.back.SetRGB, row.back, e.me and UI.ME or UI.ROW1, 0)
                 pcall(row.pos.SetRGB, row.pos, pos <= 3 and GOLDC or WHITE, 0)
                 pcall(row.mark.SetAlpha, row.mark, (e.me or pos <= 3) and 1 or 0, 0)
                 pcall(row.mark.SetRGB, row.mark, e.me and GREEN or GOLDC, 0)
@@ -1138,7 +1263,7 @@ local function build(menu, controller)
     for k = 1, SQ_ROWS do
         local t = 370 + (k - 1) * 66
         local row = {}
-        row.back = box(v, 0x1A1A1A, 1, -760, 760, t, t + 60)
+        row.back = box(v, UI.ROW1, 1, -760, 760, t, t + 60)
         row.mark = box(v, GOLDC, 1, -760, -755, t, t + 60)
         row.star = image(v, STAR_ICON, 0.4, -740, -700, t + 10, t + 50)
         row.title = text(v, "", 22, WHITE, -690, -200, t + 6, t + 32, LEFT, true)
@@ -1262,7 +1387,7 @@ local function build(menu, controller)
     for k = 1, 3 do
         local t = 470 + (k - 1) * 140
         local row = {}
-        row.back = box(v, 0x1A1A1A, 1, 46, 754, t, t + 126)
+        row.back = box(v, UI.ROW1, 1, 46, 754, t, t + 126)
         row.star = image(v, STAR_ICON, 0.4, 66, 126, t + 20, t + 80)
         row.desc = text(v, "", 20, WHITE, 140, 560, t + 14, t + 40, LEFT, true)
         row.fill = bar(v, 140, 540, t + 60, 10, GOLDC)
@@ -1493,38 +1618,48 @@ local function build(menu, controller)
     for k, name in ipairs(langNames) do
         local col, row = (k - 1) % 2, math.floor((k - 1) / 2)
         local l, t = (k == #langNames and #langNames % 2 == 1) and -240 or (-560 + col * 600), 380 + row * 120
-        lamps[k] = box(v, (k == current_) and GREEN or 0x3A3A3A, 1, l, l + 8, t, t + 80)
+        lamps[k] = box(v, (k == current_) and GREEN or UI.OFF, 1, l, l + 8, t, t + 80)
         local btn = pageButton(6, name, l + 14, l + 480, t, t + 80, function()
             settings.lang = k; saveSettings(settings)
             pcall(function() BR95RankedLang.load() end)
-            for j, lamp in ipairs(lamps) do pcall(lamp.SetRGB, lamp, (j == k) and GREEN or 0x3A3A3A, 150) end
+            for j, lamp in ipairs(lamps) do pcall(lamp.SetRGB, lamp, (j == k) and GREEN or UI.OFF, 150) end
             set(saved, "SAVED: OPEN ANOTHER TAB, THEN COME BACK")
         end)
         if btn.Text then pcall(btn.Text.setText, btn.Text, name) end
     end
 
-    -- page buttons in the header, with an underline on the current page;
-    -- the LANGUAGE button sits on the left of the RP chip
-    local navL, navW = -120, 178
-    local LANG_L, LANG_R = 330, 548
-    local underline = accent(box(root, rank.color, 1, navL, navL + navW - 10, 186, 190), 6)
+    -- page buttons: a column in the blue strip on the left (LANGUAGE last), a white
+    -- mark and a light wash on the current one that glide to the page you open
+    local NAV_T, NAV_H = 506, 56
+    local mark = accent(box(side, WHITE, 1, -944, -936, NAV_T, NAV_T + 46), 6)
+    local wash = box(side, WHITE, 0.10, -936, -652, NAV_T, NAV_T + 46)
+    local markY = NAV_T
     local function showView(k)
         current = k
         if k == 4 and not entries then pcall(buildBoard) end
+        drop("page")
         for j = 1, #PAGES do
-            pcall(views[j].SetAlpha, views[j], (j == k) and 1 or 0, 150)
+            pcall(views[j].SetAlpha, views[j], (j == k) and 1 or 0, (j == k) and 260 or 120)
             for _, e in ipairs(pageButtons[j]) do
                 local off = (j == k) and 0 or 6000
                 place(e.btn, e.l + off, e.r + off, e.t, e.b)
             end
         end
-        if k == 6 then
-            place(underline, LANG_L, LANG_R, 240, 243)
-        else
-            -- SEASON QUESTS (7) is opened from the QUESTS page: the underline stays on QUESTS
-            local l = navL + ((k >= 7 and 2 or k) - 1) * navW
-            place(underline, l, l + navW - 10, 186, 190)
-        end
+        -- the new page (and its buttons) rises in
+        local g, btns = views[k], pageButtons[k]
+        tween(0, 360, easeOut, function(e)
+            local y = 34 * (1 - e)
+            g:SetAnchorsAndPosition(0, 1, 0, 1, UI.DX, 1920 + UI.DX, y, 1080 + y)
+            for _, b in ipairs(btns) do place(b.btn, b.l, b.r, b.t + y, b.b + y) end
+        end, nil, "page")
+        -- SEASON QUESTS (7) and CHALLENGES (8) are opened from other pages: the mark stays on QUESTS
+        local from, to = markY, NAV_T + ((k >= 7 and 2 or k) - 1) * NAV_H
+        drop("mark")
+        tween(0, 280, easeOut, function(e)
+            markY = from + (to - from) * e
+            place(mark, -944, -936, markY, markY + 46)
+            place(wash, -936, -652, markY, markY + 46)
+        end, nil, "mark")
         if k == 7 and state.refreshSeason then pcall(state.refreshSeason) end
         if k == 8 and state.refreshRewards then pcall(state.refreshRewards) end
     end
@@ -1532,26 +1667,27 @@ local function build(menu, controller)
     for k, name in ipairs(PAGES) do
         if k == 7 then break end
         local btn = MenuBuilder.BuildRegisteredType("GenericButton", { controllerIndex = controller })
-        if k == 6 then
-            btn:SetAnchorsAndPosition(0.5, 0.5, 0, 1, LANG_L, LANG_R, 200, 238)
-        else
-            local l = navL + (k - 1) * navW
-            btn:SetAnchorsAndPosition(0.5, 0.5, 0, 1, l, l + navW - 10, 134, 182)
-        end
+        local t = NAV_T + (k - 1) * NAV_H
+        btn:SetAnchorsAndPosition(0.5, 0.5, 0, 1, -930, -656, t, t + 46)
         root:addElement(btn)
         if btn.Text then
             pcall(btn.Text.SetFontSize, btn.Text, 18)
             pcall(btn.Text.setText, btn.Text, T(name))
         end
         btn:addEventHandler("button_action", function() pcall(showView, k) end)
+        -- buttons are not in the column group: they slide in on their own, one by one
+        tween(150 + k * 60, 420, easeOut, function(e)
+            local x = -80 * (1 - e)
+            btn:SetAnchorsAndPosition(0.5, 0.5, 0, 1, -930 + x, -656 + x, t, t + 46)
+        end, btn)
     end
     -- lets the official ranked tab open one of our pages (Challenges & Rewards -> QUESTS)
     state.showView = showView
 
-    -- one 55 ms timer: SR counting up, the living SR bar, pulses, flowing colours
+    -- one 55 ms timer: pulses, flowing colours, the tip of the bar
     state.settings = settings
     local SPEEDS = { slow = { 16, 8, 4 }, fast = { 4, 2, 1 } }
-    local phase, shown, up, shineX = 0, 0, true, BL
+    local phase, up = 0, true
     root:registerEventHandler("br95_iris_tick", function()
         -- the hidden copy in the ranked lobby (br95_ranked_official_post.lua) sleeps
         -- until it is shown: no work 18 times a second for a page nobody sees
@@ -1560,23 +1696,8 @@ local function build(menu, controller)
         if phase == 2 then
             for _, e in ipairs(intro) do pcall(e.el.SetAlpha, e.el, e.alpha, e.ms) end
         end
-        -- SR counts up and the bar follows it
-        if shown < p.sr then
-            shown = math.min(p.sr, shown + math.max(1, math.ceil(p.sr / 22)))
-            set(srText, tostring(shown))
-            pcall(setHero, heroPct * shown / math.max(1, p.sr))
-        elseif phase == 3 then
-            pcall(setHero, heroPct)
-        end
-        -- a light runs along the filled part of the bar
-        shineX = shineX + 9
-        if shineX > heroRight + 60 then shineX = BL - 60 end
-        local sl, sr = math.max(BL, shineX), math.min(heroRight, shineX + 60)
-        if sr > sl then
-            place(shine, sl, sr, BT, BT + BH); pcall(shine.SetAlpha, shine, 0.35, 0)
-        else
-            pcall(shine.SetAlpha, shine, 0, 0)
-        end
+        -- safety: 5 s after the opening every tween must be over
+        if phase == 90 then finishTweens() end
         -- the tip of the bar breathes
         if phase % 11 == 0 then pcall(tip.SetAlpha, tip, (phase % 22 == 0) and 1 or 0.25, 550) end
         if phase % 22 == 0 then
@@ -1595,6 +1716,37 @@ local function build(menu, controller)
         end
     end)
     root:addElement(LUI.UITimer.new({ interval = 55, event = "br95_iris_tick", eventTarget = root, disposable = false }))
+
+    -- one 16 ms timer for everything that moves: tweens and the light on the SR bar
+    root:registerEventHandler("br95_ui_anim", function()
+        if root.br95Paused then return end
+        local now = os.clock() * 1000
+        for k = #tweens, 1, -1 do
+            local tw = tweens[k]
+            if tw then
+                tw.start = tw.start or now
+                local x = (now - tw.start - tw.delay) / tw.dur
+                if x >= 0 then
+                    if tw.fade and not tw.faded then
+                        tw.faded = true
+                        pcall(tw.fade.SetAlpha, tw.fade, 1, math.floor(tw.dur * 0.7))
+                    end
+                    if x >= 1 then x = 1; table.remove(tweens, k) end
+                    pcall(tw.step, tw.ease(x))
+                end
+            end
+        end
+        -- a light (60 px) runs along the filled part of the bar, 0.3 px per ms
+        local span = heroRight - BL + 120
+        local sx = BL - 60 + (now * 0.3) % span
+        local sl, sr = math.max(BL, sx), math.min(heroRight, sx + 60)
+        if sr > sl then
+            place(shine, sl, sr, BT, BT + BH); pcall(shine.SetAlpha, shine, 0.35, 0)
+        else
+            pcall(shine.SetAlpha, shine, 0, 0)
+        end
+    end)
+    root:addElement(LUI.UITimer.new({ interval = 16, event = "br95_ui_anim", eventTarget = root, disposable = false }))
     return root
 end
 

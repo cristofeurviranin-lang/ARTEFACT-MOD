@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "63e63b4c",
+  "version": "4d566df4",
   "clients": [
     {
       "id": "lumen",
@@ -118,9 +118,9 @@
     {
       "id": "br95_ranked_v1",
       "client": "lumen",
-      "title": "BR95 RANKED V2 0.5 (Warzone)",
-      "description": "Offline Ranked Play for Warzone with the OFFICIAL Ranked Play lobby of the game: playlist RESURGENCE RANKED WARZONE (Rebirth, quads), official rank card, divisions Bronze to Top 250 with I/II/III, Next Promotion, Hot Streak flames, official ranked HUD and SR counter in match, bots ranked around you. V2 0.5: ranked works for your friends too in the same match (Radmin / LAN): each player gets his own SR with his own rank. Fix: Crimson, Iridescent and Top 250 can be climbed again (minimum kills 5 / 15 / 25). V2 0.4: BOT LEVEL setting (recruit / easy / normal / hard / extreme) and a new SETTINGS page. V2 0.3: official SR rules (Deployment Fee by step, Death Fee by division, Placement SR Top 12 +20 to 1st +100), SR for KO, elimination and assist synced with the game kill counter, SETTINGS with Ranked HUD on/off, bot damage and bot zone. Challenges & Rewards with real ranked camos, daily and season quests, stats, ranking of 200 to 5000 players, 7 languages.",
-      "version": "778044d7",
+      "title": "br95_ranked_v1",
+      "description": "",
+      "version": "90248e85",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_client_post.lua",
@@ -130,7 +130,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_hud_post.lua",
-          "sha256": "1ad3acbb715afab69d50dd48f8dce7993289012ff4d2f2660bec22113df0b1f5"
+          "sha256": "9b644c806f46a1b63f8ff7713476c2ace1be13c2ac6bf5cd9edcc7f083729246"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_lang_post.lua",
@@ -155,12 +155,32 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
-          "sha256": "3a89059d808983db935c35af61701b74ecc81ca62745de40ebf81c746ae5a096"
+          "sha256": "d2796bd1910c52681a128a5e31078421c4902a3d9a776046a575f4b7c0623860"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_shop_post.lua",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_shop_post.lua",
+          "sha256": "0791c78b2388e1ea2187ef7b09e585083f8778f85942e1bb997d83e9c00aa8c1"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_tab_events_post.lua",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_tab_events_post.lua",
+          "sha256": "baf8d66928abaca1f425b83756b701c26e5b701d11aa12f30b9e5b6ad352c707"
+        },
+        {
+          "path": "jupiter/Assets/Lua/br95_ranked_tab_world_post.lua",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_tab_world_post.lua",
+          "sha256": "a5c4567e2e294a2bd7d8818937fa908dc3ecd584e4484d35b3a96daf868214e1"
         },
         {
           "path": "jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/br/br95_ranked.gscc",
           "sha256": "6091ab7eb8fbf51fb8ebe8c8d3b54cfbc59a2008a3d15f9dbad478265d1223d9"
+        },
+        {
+          "path": "jupiter/Assets/Scripts/Custom/wz2/br95_bot_cash.gscc",
+          "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Scripts/Custom/wz2/br95_bot_cash.gscc",
+          "sha256": "f22a3ccb0d12bcff23145b83593568a5723be25d8256f703d53f4b2bd0dd3bce"
         }
       ]
     },
@@ -180,12 +200,12 @@
     }
   ],
   "launcher": {
-    "version": "9bcb0292",
+    "version": "20e23223",
     "files": [
       {
         "path": "core.py",
         "url": "launcher/core.py",
-        "sha256": "b00679a1f37865943854a0b6302b147e8e1cd75a11b318a078a9f158032d4f65"
+        "sha256": "69992d77ec76ed175ed3b77f1c05aeda5cfb647f404fb00f6f9a24e1bba22c05"
       },
       {
         "path": "ui.py",
@@ -195,7 +215,7 @@
       {
         "path": "joueur.pyw",
         "url": "launcher/joueur.pyw",
-        "sha256": "1f4f662388d4c5115341c09503f67b5e0f939e22fa890498eb32667cf1001fa8"
+        "sha256": "2fcb184d07e785137b024cdc6e64a48fc08d4f2e2e9ece09631f20628237da86"
       },
       {
         "path": "assets/bo7_banner.png",

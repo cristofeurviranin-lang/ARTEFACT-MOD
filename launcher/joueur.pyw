@@ -338,6 +338,11 @@ class PlayerApp:
                  font=self.fonts.body, anchor="w").pack(side="left", fill="x", expand=True)
         row = tk.Frame(box, bg=ui.PANEL)
         row.pack(fill="x", pady=(14, 0))
+        ui.Switch(row, self.state.get("world_sync", True), self.set_world_sync).pack(side="right")
+        tk.Label(row, text="BR95 Ranked: keep the online world ranking up to date (runs in the background)",
+                 bg=ui.PANEL, fg=ui.TEXT, font=self.fonts.body, anchor="w").pack(side="left", fill="x", expand=True)
+        row = tk.Frame(box, bg=ui.PANEL)
+        row.pack(fill="x", pady=(14, 0))
         self.check_button = ui.Button(row, "Check for updates", self.check_updates, self.fonts.button, height=34,
                                       kind="secondary", width=160)
         self.check_button.set_enabled(not self.busy)
@@ -458,14 +463,33 @@ class PlayerApp:
         def work():
             core.install_mod(mod, core.mods_folder(client, self.state), self.settings["update_url"],
                              self.progress_to(button))
+            self.update_world_sync()
             return "%s installed. It's active in %s now." % (mod["title"], client["name"])
         self.run_in_background(work, "Installing %s..." % mod["title"], button, "Installing...")
 
     def run_uninstall(self, client, mod, button=None):
         def work():
             core.uninstall_mod(mod, core.mods_folder(client, self.state))
+            self.update_world_sync()
             return "%s uninstalled from %s." % (mod["title"], client["name"])
         self.run_in_background(work, "Uninstalling %s..." % mod["title"], button, None)
+
+    def update_world_sync(self):
+        """The Ranked mod's online WORLD RANKING needs a small background job (the game has no internet):
+        kept running for the player, with nothing to set, while such a mod is installed."""
+        for client in self.clients():
+            folder = core.mods_folder(client, self.state)
+            mods = [m for m in self.client_mods(client["id"]) if m["id"] in core.WZ_SYNC_MODS]
+            if not folder or not mods:
+                continue
+            installed = any(core.mod_status(m, folder) != "missing" for m in mods)
+            core.set_world_sync(folder, installed and self.state.get("world_sync", True))
+
+    def set_world_sync(self, value):
+        self.state["world_sync"] = value
+        core.save_state(self.state)
+        self.update_world_sync()
+        self.status.set("ok", "World ranking sync %s." % ("on" if value else "off"))
 
     def check_updates(self):
         url = self.settings.get("update_url")
@@ -493,6 +517,7 @@ class PlayerApp:
                         if core.mod_status(mod, folder) == "update":
                             core.install_mod(mod, folder, url)
                             updated.append(mod["title"])
+            self.update_world_sync()
             changed = bool(updated) or manifest.get("version") != known
             if updated:
                 return "Updated: %s." % ", ".join(updated), changed

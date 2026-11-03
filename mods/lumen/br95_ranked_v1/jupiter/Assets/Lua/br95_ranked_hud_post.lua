@@ -195,6 +195,27 @@ local function markMatchStart()
     if saved == 0 or os.time() - saved > 10800 then writeFile(START_FILE, os.time() .. "|" .. readRP()) end
 end
 
+-- ranked bonus bought in the RANKED SHOP (br95_ranked_shop_post.lua), used by the
+-- first ranked result seen: 1 = SR PROTECTION (a loss counts 0 SR), 2 = SR X2
+-- (SR won doubled). Fixes the profile and the live values, sets live.bonus.
+local function applyBonus(live)
+    local BONUS = "jupiter/IO/br95_shop_bonus.txt"
+    local kind = tonumber((readAll(BONUS) or ""):match("^BR95SB1|(%d)|END")) or 0
+    if kind == 0 then return end
+    writeFile(BONUS, "BR95SB1|0|END")
+    live.bonus = kind
+    local extra = 0
+    if kind == 1 and live.delta < 0 then extra = -live.delta
+    elseif kind == 2 and live.delta > 0 then extra = live.delta end
+    if extra == 0 then return end
+    local PROFILE = "jupiter/IO/br95_ranked.txt"
+    local sr, m, k, b, l = (readAll(PROFILE) or ""):match("^BR95R1|(%-?%d+)|(%-?%d+)|(%-?%d+)|(%-?%d+)|(%-?%d+)|END")
+    if not sr then return end
+    sr = tonumber(sr) + extra
+    writeFile(PROFILE, "BR95R1|" .. sr .. "|" .. m .. "|" .. k .. "|" .. math.max(tonumber(b), sr) .. "|" .. (tonumber(l) + extra) .. "|END")
+    live.sr, live.delta = live.sr + extra, live.delta + extra
+end
+
 -- returns the RP won in the match
 local function recordMatch(live)
     local start, rpStart = readStart()
@@ -307,6 +328,11 @@ local function showEndScreen(root, live, rp)
     delta:SetRGB(live.delta >= 0 and GREEN or RED, 0)
     local from = newText(panel, 18, false, 280, 850, 224, 248)
     from:setText(T("FROM %s SR  (%s)", before, rankLabel(before))); from:SetRGB(GREY, 0)
+    if live.bonus then
+        local bonus = newText(panel, 20, true, 560, 850, 258, 286, RIGHT)
+        bonus:setText(live.bonus == 1 and "SR PROTECTION USED" or "SR X2 USED")
+        bonus:SetRGB(live.bonus == 1 and 0x4FA3FF or 0xFFB020, 0)
+    end
     if rp and rp > 0 then
         newImage(panel, STAR_ICON, 280, 308, 258, 286)
         local rpText = newText(panel, 26, true, 316, 850, 258, 288)
@@ -366,6 +392,7 @@ local function frontendWatch(root)
         end
         if not live or live.active ~= 0 then return end
         if live.sr == 0 and live.kills == 0 and live.deaths == 0 and live.delta == 0 then return end -- ranked off
+        pcall(applyBonus, live)
         writeFile(LIVE_FILE, "BR95L1|" .. live.sr .. "|" .. live.kills .. "|" .. live.deaths .. "|" .. live.delta .. "|2|END")
         local ok, rp = pcall(recordMatch, live)
         pcall(showEndScreen, root, live, ok and rp or 0)

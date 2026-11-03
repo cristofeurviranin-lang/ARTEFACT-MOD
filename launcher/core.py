@@ -11,13 +11,18 @@ Files next to this script:
   depot/          admin only: what gets pushed to GitHub (manifest.json + mods/)
 """
 
+import datetime
 import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
+import sys
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -604,3 +609,366 @@ def build_player_pack():
                 path = os.path.join(root, name)
                 archive.write(path, os.path.join(folder_name, os.path.relpath(path, staging)))
     return zip_path
+
+
+# ---------------------------------------------------------------- BR95 world ranking sync
+#
+# The WORLD RANKING tab of the BR95 Ranked mod (LUMEN) shows an online ladder, but the game has
+# no internet. This small job does it for the game: it sends the player's ranked SR and the
+# profile chosen in the tab to the ranking server (Supabase) and downloads the ladder, through
+# files in <game>\jupiter\IO. The player has nothing to set: when such a mod is installed the
+# launcher starts the job with Windows (HKCU Run, pythonw: no window) and right away
+# (`pythonw core.py --wz-sync <game folder>`). One copy runs at a time (mutex). It stops when the
+# mod is uninstalled, when its switch in Settings is turned off, or when this file is updated
+# (the launcher starts the new one).
+#   br95_wr_profile.txt  game -> job  BR95WP1|joined|name|country|avatar|banner|title|weapon|discord|END
+#   br95_wr_request.txt  game -> job  any change = refresh now
+#   br95_wr_id.txt       job          BR95WI1|id|secret|END (copy in %LOCALAPPDATA%\BR95)
+#   br95_wr_board.txt    job -> game  BR95WB1|fetched|total|season|END, then P|place|id|name|country|sr|
+#                                     best|matches|kills|deaths|wins|avatar|banner|title|weapon|bot|
+#                                     updated|created|discord|END rows (M| = the player outside the list)
+#   br95_wr_status.txt   job -> game  BR95WS1|state|message|time|END (written every few seconds)
+#   br95_wr_hint.txt     job -> game  BR95WH1|CC|END (Windows region: the tab picks it first)
+
+WZ_SYNC_MODS = {"br95_ranked_v1"}
+WZ_TAB_FILE = os.path.join("jupiter", "Assets", "Lua", "br95_ranked_tab_world_post.lua")
+# started with Windows by a shortcut in the user's Startup folder, not a registry Run value:
+# Python from the Microsoft Store / Python Install Manager runs packaged, its registry writes
+# land in a private copy Windows never reads at logon (its file writes are real)
+WZ_SHORTCUT = "BR95 World Ranking.lnk"
+WZ_RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+WZ_RUN_VALUE = "BR95WzSync"                                # old way, removed when found
+WZ_URL = "https://biaokohvbbgjkcxmtolg.supabase.co/rest/v1"
+WZ_KEY = "sb_publishable_swYoipVjKkhnSK7spKFsOA_3f39aq8p"   # public key: reads the ladder, calls the server function
+WZ_COLUMNS = ("player_id,name,country,sr,best_sr,matches,kills,deaths,wins,season,"
+              "avatar,banner,title,weapon,discord,is_bot,updated_at,created_at")
+WZ_SEASON_EPOCH, WZ_SEASON_DAYS = 1792613644, 21           # same calendar as br95_ranked_post.lua
+WZ_NAME = re.compile(r"^[A-Za-z0-9_.-]{3,16}$")
+WZ_DISCORD = re.compile(r"^[a-z0-9_.]{0,32}$")
+WZ_COUNTRY = re.compile(r"^[A-Z]{2}$")
+WZ_ID = re.compile(r"^BR95WI1\|([0-9a-f]{32})\|([0-9a-f]{48})\|END")
+
+
+def wz_appdata():
+    return os.path.join(os.environ.get("LOCALAPPDATA", HERE), "BR95")
+
+
+def wz_shortcut_path():
+    return os.path.join(os.environ.get("APPDATA", HERE), "Microsoft", "Windows", "Start Menu", "Programs",
+                        "Startup", WZ_SHORTCUT)
+
+
+def set_world_sync(game, on):
+    """Starts the world ranking job with Windows and right away (on), or stops it for good (off).
+    Never raises: the launcher works the same without it. Returns True when it was applied."""
+    stop_file = os.path.join(wz_appdata(), "wz_sync.stop")
+    shortcut = wz_shortcut_path()
+    try:
+        os.makedirs(wz_appdata(), exist_ok=True)
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, WZ_RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.DeleteValue(key, WZ_RUN_VALUE)
+        except (ImportError, OSError):
+            pass
+        if not on:
+            if os.path.exists(shortcut):
+                os.remove(shortcut)
+            with open(stop_file, "w", encoding="ascii") as f:
+                f.write("stop")
+            return True
+        if os.path.exists(stop_file):
+            os.remove(stop_file)
+        pythonw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+        if not os.path.isfile(pythonw):
+            pythonw = sys.executable
+        script = os.path.join(HERE, "core.py")
+        arguments = '"%s" --wz-sync "%s"' % (script, game)
+        # the shortcut is written by Windows' own shortcut maker (values passed as environment
+        # variables: nothing to quote); no window
+        maker = ("$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:BR95_LNK);"
+                 "$s.TargetPath = $env:BR95_TARGET; $s.Arguments = $env:BR95_ARGS;"
+                 "$s.WorkingDirectory = $env:BR95_DIR; $s.WindowStyle = 7;"
+                 "$s.Description = 'BR95 Ranked world ranking (ARTEFACT launcher)'; $s.Save()")
+        env = dict(os.environ, BR95_LNK=shortcut, BR95_TARGET=pythonw, BR95_ARGS=arguments, BR95_DIR=HERE)
+        subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", maker], env=env, timeout=60,
+                       creationflags=0x08000000, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # a second copy quits at once (mutex): starting it every time is fine
+        subprocess.Popen([pythonw, script, "--wz-sync", game], cwd=HERE, close_fds=True,
+                         creationflags=0x00000008 | 0x00000200)   # detached, own process group
+        return os.path.exists(shortcut)
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+class WorldSync:
+    """The background job itself (pythonw core.py --wz-sync <game folder>)."""
+
+    LOOP_SECONDS, BOARD_EVERY, RESEND_EVERY, BOARD_SIZE = 2, 40, 600, 300
+
+    def __init__(self, game):
+        self.game = os.path.normpath(game)
+        self.io = os.path.join(self.game, "jupiter", "IO")
+        self.appdata = wz_appdata()
+        self.log_file = os.path.join(self.appdata, "wz_sync.log")
+
+    # ------------------------------------------------ files
+    def log(self, text):
+        try:
+            os.makedirs(self.appdata, exist_ok=True)
+            if os.path.exists(self.log_file) and os.path.getsize(self.log_file) > 200000:
+                os.replace(self.log_file, self.log_file + ".old")
+            with open(self.log_file, "a", encoding="utf-8") as f:
+                f.write(time.strftime("%Y-%m-%d %H:%M:%S  ") + text + "\n")
+        except OSError:
+            pass
+
+    def read(self, name):
+        try:
+            with open(os.path.join(self.io, name), "r", encoding="utf-8", errors="replace") as f:
+                return f.read()
+        except OSError:
+            return ""
+
+    def write(self, name, text):
+        # whole file at once: the game never reads half a file
+        path = os.path.join(self.io, name)
+        try:
+            with open(path + ".tmp", "w", encoding="utf-8", newline="\n") as f:
+                f.write(text)
+            os.replace(path + ".tmp", path)
+        except OSError as error:
+            self.log("write %s: %s" % (name, error))
+
+    def status(self, state, message=""):
+        message = re.sub(r"[|\r\n]", " ", message)[:120]
+        self.write("br95_wr_status.txt", "BR95WS1|%s|%s|%d|END" % (state, message, int(time.time())))
+
+    # ------------------------------------------------ server
+    @staticmethod
+    def http(method, path, body=None, headers=None):
+        data = json.dumps(body).encode("utf-8") if body is not None else None
+        request = urllib.request.Request(WZ_URL + path, data=data, method=method)
+        request.add_header("apikey", WZ_KEY)
+        request.add_header("Accept", "application/json")
+        if data is not None:
+            request.add_header("Content-Type", "application/json")
+        for k, v in (headers or {}).items():
+            request.add_header(k, v)
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            return response.headers, json.loads(response.read().decode("utf-8") or "null")
+
+    @staticmethod
+    def total_of(headers):
+        # Content-Range: 0-9/123 or */123
+        match = re.search(r"/(\d+)$", headers.get("Content-Range", "") or "")
+        return int(match.group(1)) if match else 0
+
+    @staticmethod
+    def epoch(iso):
+        try:
+            return int(datetime.datetime.fromisoformat(str(iso).replace("Z", "+00:00")).timestamp())
+        except (TypeError, ValueError):
+            return 0
+
+    # ------------------------------------------------ this PC
+    @staticmethod
+    def season_now():
+        return max(1, int((time.time() - WZ_SEASON_EPOCH) // (WZ_SEASON_DAYS * 86400)) + 1)
+
+    def identity(self):
+        backup = os.path.join(self.appdata, "wr_id.txt")
+        match = WZ_ID.match(self.read("br95_wr_id.txt"))
+        if not match:
+            # same id after a game reinstall
+            try:
+                with open(backup, "r", encoding="utf-8") as f:
+                    match = WZ_ID.match(f.read())
+            except OSError:
+                match = None
+            if match:
+                self.write("br95_wr_id.txt", match.group(0))
+        if not match:
+            line = "BR95WI1|%s|%s|END" % (secrets.token_hex(16), secrets.token_hex(24))
+            self.write("br95_wr_id.txt", line)
+            match = WZ_ID.match(line)
+            self.log("new identity")
+        try:
+            os.makedirs(self.appdata, exist_ok=True)
+            with open(backup, "w", encoding="utf-8") as f:
+                f.write(match.group(0))
+        except OSError:
+            pass
+        return match.group(1), match.group(2)
+
+    def profile(self):
+        # once made, a profile is always in the ranking (there is no way to leave it)
+        f = self.read("br95_wr_profile.txt").split("\n")[0].split("|")
+        if len(f) < 10 or f[0] != "BR95WP1":
+            return None
+
+        def number(s):
+            return int(s) if s.isdigit() else 0
+        p = {"name": f[2], "country": f[3], "avatar": number(f[4]), "banner": number(f[5]),
+             "title": number(f[6]), "weapon": number(f[7]), "discord": f[8]}
+        if not WZ_NAME.match(p["name"]) or not WZ_COUNTRY.match(p["country"]) or not WZ_DISCORD.match(p["discord"]):
+            return None
+        return p
+
+    def stats(self):
+        """SR of the current season (0 when the saved SR belongs to an older season: the game resets it
+        next time the RANKED tab opens) and the season's matches from the match history, so kills,
+        deaths and wins come from the same matches (the profile's own counters only when the history
+        has none)."""
+        season = self.season_now()
+        start = WZ_SEASON_EPOCH + (season - 1) * WZ_SEASON_DAYS * 86400
+        sr = matches = kills = 0
+        profile = re.match(r"^BR95R1\|(-?\d+)\|(-?\d+)\|(-?\d+)\|", self.read("br95_ranked.txt"))
+        stored = re.match(r"^BR95S1\|\d+\|(\d+)\|", self.read("br95_season.txt"))
+        if profile and (not stored or int(stored.group(1)) == season):
+            sr, matches, kills = (max(0, int(profile.group(i))) for i in (1, 2, 3))
+        h_matches = h_kills = deaths = wins = 0
+        for line in self.read("br95_ranked_history.txt").splitlines():
+            f = line.split("|")
+            if len(f) >= 8 and f[0] == "H":
+                try:
+                    t, delta, k, d = int(f[1]), int(f[3]), int(f[4]), int(f[5])
+                except ValueError:
+                    continue
+                if t >= start:
+                    h_matches += 1
+                    h_kills += max(0, k)
+                    deaths += max(0, d)
+                    wins += 1 if delta > 0 else 0
+        if h_matches:
+            matches, kills = h_matches, h_kills
+        return {"sr": min(sr, 100000), "matches": matches, "kills": kills, "deaths": deaths, "wins": wins,
+                "season": season}
+
+    def country_hint(self):
+        try:
+            import ctypes
+            buffer = ctypes.create_unicode_buffer(85)
+            if ctypes.windll.kernel32.GetUserDefaultLocaleName(buffer, 85):
+                match = re.search(r"-([A-Z]{2})$", buffer.value)
+                if match:
+                    self.write("br95_wr_hint.txt", "BR95WH1|%s|END" % match.group(1))
+        except (ImportError, AttributeError, OSError):
+            pass
+
+    # ------------------------------------------------ work
+    def submit(self, pid, secret, p, s):
+        _, result = self.http("POST", "/rpc/submit_wz_ranked2", {
+            "p_id": pid, "p_secret": secret, "p_name": p["name"], "p_country": p["country"],
+            "p_sr": s["sr"], "p_matches": s["matches"], "p_kills": s["kills"], "p_deaths": s["deaths"],
+            "p_wins": s["wins"], "p_season": s["season"], "p_avatar": p["avatar"], "p_banner": p["banner"],
+            "p_title": p["title"], "p_weapon": p["weapon"], "p_discord": p["discord"]})
+        return str(result)
+
+    def row(self, tag, place, r):
+        def clean(v):
+            return re.sub(r"[|\r\n]", "", str(v if v is not None else ""))
+
+        def num(key):
+            return str(int(r.get(key) or 0))
+        return "|".join([tag, str(place), clean(r.get("player_id")), clean(r.get("name")), clean(r.get("country")),
+                         num("sr"), num("best_sr"), num("matches"), num("kills"), num("deaths"), num("wins"),
+                         num("avatar"), num("banner"), num("title"), num("weapon"), "1" if r.get("is_bot") else "0",
+                         str(self.epoch(r.get("updated_at"))), str(self.epoch(r.get("created_at"))),
+                         clean(r.get("discord")), "END"])
+
+    def board(self, pid, registered):
+        season = self.season_now()
+        shown = "or=(season.eq.%d,is_bot.is.true)" % season
+        headers, rows = self.http("GET", "/wz_ranked?select=%s&%s&order=sr.desc,updated_at.asc&limit=%d"
+                                  % (WZ_COLUMNS, shown, self.BOARD_SIZE), headers={"Prefer": "count=exact"})
+        rows = rows or []
+        lines = ["BR95WB1|%d|%d|%d|END" % (int(time.time()), self.total_of(headers) or len(rows), season)]
+        mine = False
+        for place, r in enumerate(rows, 1):
+            lines.append(self.row("P", place, r))
+            mine = mine or r.get("player_id") == pid
+        if registered and not mine:
+            _, me = self.http("GET", "/wz_ranked?select=%s&player_id=eq.%s&%s" % (WZ_COLUMNS, pid, shown))
+            if me:
+                headers, _ = self.http("GET", "/wz_ranked?select=player_id&%s&sr=gt.%d&limit=1"
+                                       % (shown, int(me[0].get("sr") or 0)), headers={"Prefer": "count=exact"})
+                lines.append(self.row("M", self.total_of(headers) + 1, me[0]))
+        self.write("br95_wr_board.txt", "\n".join(lines) + "\n")
+        return len(rows)
+
+    def should_stop(self, started):
+        if os.path.exists(os.path.join(self.appdata, "wz_sync.stop")):
+            return "turned off in the launcher"
+        if not os.path.exists(os.path.join(self.game, WZ_TAB_FILE)):
+            return "ranked mod not installed"
+        try:
+            if os.path.getmtime(os.path.join(HERE, "core.py")) != started:
+                return "launcher updated"
+        except OSError:
+            return "launcher removed"
+        return None
+
+    def run(self):
+        import ctypes
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateMutexW(None, False, "BR95WzSyncMutex")
+        if ctypes.get_last_error() == 183:          # ERROR_ALREADY_EXISTS: one copy is enough
+            return
+        if not os.path.isdir(self.io):
+            self.log("game folder not found: " + self.game)
+            return
+        started = os.path.getmtime(os.path.join(HERE, "core.py"))
+        self.log("start game=" + self.game)
+        self.country_hint()
+        pid, secret = self.identity()
+        last_sig, last_sent, last_board, last_request, registered = None, 0, 0, None, False
+        state, message = "OK", "WAITING FOR YOUR PROFILE"
+        while True:
+            reason = self.should_stop(started)
+            if reason:
+                self.log("stop: " + reason)
+                return
+            try:
+                p = self.profile()
+                if p:
+                    s = self.stats()
+                    sig = tuple(p.values()) + tuple(s.values())
+                    if sig != last_sig or time.time() - last_sent > self.RESEND_EVERY:
+                        result = self.submit(pid, secret, p, s)
+                        last_sig, last_sent, last_board = sig, time.time(), 0
+                        if result in ("created", "updated"):
+                            state, message, registered = "OK", "SENT SR %d" % s["sr"], True
+                        elif result == "name taken":
+                            state, message = "NAMETAKEN", "THIS NAME IS ALREADY TAKEN"
+                        else:
+                            state, message = "ERROR", "SERVER: " + result.upper()
+                        self.log("submit %s sr=%d -> %s" % (p["name"], s["sr"], result))
+                request = self.read("br95_wr_request.txt")
+                if request != last_request or time.time() - last_board > self.BOARD_EVERY:
+                    last_request = request
+                    count = self.board(pid, registered)
+                    last_board = time.time()
+                    if state == "OFFLINE" or message == "WAITING FOR YOUR PROFILE" and not p:
+                        state, message = "OK", "%d PLAYERS" % count
+                self.status(state, message)
+            except urllib.error.HTTPError as error:
+                state, message = "ERROR", "SERVER ERROR %d" % error.code
+                self.log("http %d %s" % (error.code, error.read()[:200]))
+                self.status(state, message)
+                time.sleep(20)
+            except (urllib.error.URLError, OSError, TimeoutError) as error:
+                state, message = "OFFLINE", "NO INTERNET"
+                self.log("offline: %s" % error)
+                self.status(state, message)
+                time.sleep(15)
+            except Exception as error:      # never stop: log it and go on
+                state, message = "ERROR", type(error).__name__
+                self.log("error: %r" % error)
+                self.status(state, message)
+                time.sleep(20)
+            time.sleep(self.LOOP_SECONDS)
+
+
+if __name__ == "__main__" and len(sys.argv) >= 3 and sys.argv[1] == "--wz-sync":
+    WorldSync(sys.argv[2]).run()
