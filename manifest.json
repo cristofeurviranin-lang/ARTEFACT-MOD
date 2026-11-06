@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "version": "4d566df4",
+  "version": "ffaddd5d",
   "clients": [
     {
       "id": "lumen",
@@ -120,7 +120,7 @@
       "client": "lumen",
       "title": "br95_ranked_v1",
       "description": "",
-      "version": "90248e85",
+      "version": "f3ee7a37",
       "files": [
         {
           "path": "jupiter/Assets/Lua/br95_ranked_client_post.lua",
@@ -130,7 +130,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_hud_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_hud_post.lua",
-          "sha256": "9b644c806f46a1b63f8ff7713476c2ace1be13c2ac6bf5cd9edcc7f083729246"
+          "sha256": "5129eec9282b24acab5e7d9c2257f9d10ffa9def8b73d101811ac8205751b83e"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_lang_post.lua",
@@ -145,7 +145,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_official_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_official_post.lua",
-          "sha256": "94245305c16a3bb7396f9a34949b6576b606d051bcadd00905a50f25d5878df4"
+          "sha256": "2352b30aea0de5302717f718611e22a14143d41020b170bcebb60b660c0b7e12"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_playlist_post.lua",
@@ -155,7 +155,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_post.lua",
-          "sha256": "d2796bd1910c52681a128a5e31078421c4902a3d9a776046a575f4b7c0623860"
+          "sha256": "5fe0077c340fa6385f95ce7ce24d1494591f5dde79b507e974b523f3582952c7"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_shop_post.lua",
@@ -165,7 +165,7 @@
         {
           "path": "jupiter/Assets/Lua/br95_ranked_tab_events_post.lua",
           "url": "mods/lumen/br95_ranked_v1/jupiter/Assets/Lua/br95_ranked_tab_events_post.lua",
-          "sha256": "baf8d66928abaca1f425b83756b701c26e5b701d11aa12f30b9e5b6ad352c707"
+          "sha256": "157576d1c63924a61e831f4869e391cc39694b0435473f19da9de582ebf73c2f"
         },
         {
           "path": "jupiter/Assets/Lua/br95_ranked_tab_world_post.lua",
@@ -200,12 +200,12 @@
     }
   ],
   "launcher": {
-    "version": "20e23223",
+    "version": "555b9d2a",
     "files": [
       {
         "path": "core.py",
         "url": "launcher/core.py",
-        "sha256": "69992d77ec76ed175ed3b77f1c05aeda5cfb647f404fb00f6f9a24e1bba22c05"
+        "sha256": "e630149df371adc1402c569c02836eb3110dfd3a6d2c7a6de73d072c3788df31"
       },
       {
         "path": "ui.py",

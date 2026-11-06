@@ -159,6 +159,8 @@ end
 local HISTORY_FILE = "jupiter/IO/br95_ranked_history.txt"
 local START_FILE = "jupiter/IO/br95_ranked_matchstart.txt"
 local RP_FILE = "jupiter/IO/br95_rp.txt"
+-- DOUBLE RP event window (UTC): 06/11/2026 00:00 -> 13/11/2026 22:00
+local RP_X2_FROM, RP_X2_TO = 1793923200, 1794607200
 
 local function readAll(path)
     local text
@@ -222,6 +224,13 @@ local function recordMatch(live)
     local now = os.time()
     local seconds = (start > 0 and now - start < 10800) and (now - start) or 0
     local rp = (start > 0) and math.max(0, readRP() - rpStart) or 0
+    -- DOUBLE RP event (same dates as "doublerp1" in br95_ranked_tab_events_post.lua):
+    -- the RP of a match that ends inside the window are given a second time
+    if rp > 0 and now >= RP_X2_FROM and now < RP_X2_TO then
+        writeFile(RP_FILE, "BR95P1|" .. (readRP() + rp) .. "|END")
+        rp = rp * 2
+        live.rpx2 = true
+    end
     writeFile(START_FILE, "0|0")
     state.startMarked = false
     local lines = {}

@@ -29,6 +29,20 @@ local MENU = "BR95RankedEventsMenu"
 --     },
 -- },
 local EVENTS = {
+    {
+        -- the x2 itself is applied by br95_ranked_hud_post.lua (RP_X2_FROM / RP_X2_TO: same dates)
+        id = "doublerp1",
+        name = "DOUBLE RP WEEK", tag = "RP X2 ON EVERY RANKED MATCH", color = 0xFFD166,
+        from = "2026-11-06 00:00", to = "2026-11-13 22:00",
+        art = "menu_keyart_rankedplay_01_layer_00",
+        desc = { "EVERY RANKED MATCH GIVES TWICE THE RP", "PLAY RESURGENCE RANKED WARZONE", "COMPLETE THE QUEST LINE: UP TO 5000 RP", "SPEND THEM IN THE RANKED SHOP" },
+        challenges = {
+            { desc = "PLAY %s RANKED MATCHES", stat = "matches", goal = 5, rp = 500 },
+            { desc = "GET %s KILLS IN RANKED", stat = "kills", goal = 75, rp = 1000 },
+            { desc = "WIN %s RANKED MATCHES", stat = "wins", goal = 10, rp = 1500 },
+            { desc = "EARN %s SR IN RANKED", stat = "srwon", goal = 600, rp = 2000 },
+        },
+    },
 }
 
 -- what a ranked match adds to a challenge
@@ -166,6 +180,106 @@ end
 
 local STATUS = { live = { "LIVE NOW", GREEN }, soon = { "UPCOMING", CYAN }, ended = { "ENDED", DIM } }
 
+-- "NEW" badge under the EVENTS tab, the game's own (tab button :SetBreadcrumb, as the
+-- game does for WEAPONS / BATTLE PASS): on while a live event was never opened.
+-- Opened events are kept in br95_events_seen.txt (BR95ES1|id,id|END).
+local SEEN_FILE = IO .. "br95_events_seen.txt"
+
+local function liveUnseen()
+    local seen = readText(SEEN_FILE) or ""
+    for _, item in ipairs(eventList()) do
+        if item.status == "live" and not seen:find("[|,]" .. item.e.id .. "[|,]") then return true end
+    end
+    return false
+end
+
+local function markSeen()
+    local ids = {}
+    for _, item in ipairs(eventList()) do if item.status == "live" then ids[#ids + 1] = item.e.id end end
+    local old = (readText(SEEN_FILE) or ""):match("^BR95ES1|([^|]*)|END") or ""
+    if old ~= "" then ids[#ids + 1] = old end
+    writeText(SEEN_FILE, "BR95ES1|" .. table.concat(ids, ",") .. "|END")
+end
+
+-- the tab bar (the element with GetTabIndexByWidgetName): a .Tabs field of a parent,
+-- else searched in the whole lobby tree from its top element (4000 elements at most)
+local function hasTabApi(e)
+    local ok, yes = pcall(function() return type(e.GetTabIndexByWidgetName) == "function" end)
+    return ok and yes
+end
+
+local function findTabs(el)
+    local top, p = el, el
+    for _ = 1, 40 do
+        local up
+        pcall(function() up = p:getParent() end)
+        if not up then break end
+        local tabs
+        pcall(function() tabs = up.Tabs end)
+        if tabs and hasTabApi(tabs) then return tabs, "parent .Tabs" end
+        top, p = up, up
+    end
+    local queue, head = { top }, 1
+    while head <= #queue and head <= 4000 do
+        local node = queue[head]
+        head = head + 1
+        if hasTabApi(node) then return node, "tree search" end
+        local child
+        pcall(function() child = node:getFirstChild() end)
+        while child do
+            queue[#queue + 1] = child
+            local nextChild
+            pcall(function() nextChild = child:getNextSibling() end)
+            child = nextChild
+        end
+    end
+    return nil, "not found (" .. (head - 1) .. " elements seen)"
+end
+
+-- sets the badge from any element of the lobby; true once the tab bar was found.
+-- The game's own badge (tab:SetBreadcrumb) does not show on a tab added by a mod: a
+-- red NEW pill of ours is drawn under the EVENTS button instead.
+-- What was found is written to br95_badge_diag.txt (one line).
+function state.badge(el, on)
+    if on == nil then on = liveUnseen() end
+    local tabs, how = findTabs(el)
+    if not tabs then
+        writeText(IO .. "br95_badge_diag.txt", "tabs " .. how .. "\n")
+        return false
+    end
+    local index, tab
+    pcall(function() index = tabs:GetTabIndexByWidgetName(MENU) end)
+    pcall(function() tab = index and tabs:GetTabAtIndex(index) end)
+    writeText(IO .. "br95_badge_diag.txt", "tabs " .. how .. " | index " .. tostring(index) .. " | tab "
+        .. tostring(tab and tab.id) .. " | on " .. tostring(on) .. "\n")
+    if not tab then return true end
+    local pill = state.pill
+    if not pill or pill.tab ~= tab then
+        pill = LUI.UIElement.new(); pill.id = "BR95EventsNew"
+        -- under the button: x from its centre, y from its bottom edge
+        pill:SetAnchorsAndPosition(0.5, 0.5, 1, 0, -34, 34, 3, 23)
+        local back = LUI.UIImage.new()
+        back:SetAnchorsAndPosition(0, 1, 0, 1, 0, 68, 0, 20)
+        back:SetRGB(0xE0303A, 0)
+        pill:addElement(back)
+        local label = LUI.UIText.new()
+        label:SetAnchorsAndPosition(0, 1, 0, 1, 0, 68, 2, 18)
+        if FONTS and FONTS.GetFont and FONTS.PrimaryBold and FONTS.PrimaryBold.File then
+            pcall(label.SetFont, label, FONTS.GetFont(FONTS.PrimaryBold.File))
+        end
+        pcall(label.SetFontSize, label, 16)
+        if label.SetAlignment and LUI.Alignment then label:SetAlignment(LUI.Alignment.Center) end
+        label:SetRGB(0xFFFFFF, 0)
+        label:setText("NEW")
+        pill:addElement(label)
+        tab:addElement(pill)
+        pill.tab = tab
+        state.pill = pill
+    end
+    pill:SetAlpha(on and 1 or 0, 150)
+    return true
+end
+
 -- ------------------------------------------------------------------
 -- the tab
 -- ------------------------------------------------------------------
@@ -297,6 +411,36 @@ local function build(menu, controller)
         disc(side, STATUS[key][2], 1, l, l + 10, ly + 5, ly + 15)
         text(side, ({ "LIVE", "SOON", "ENDED" })[k], 13, GREY, l + 16, l + 90, ly, ly + 20, LEFT, true)
     end
+
+    -- wipe calendar (br95_ranked_post.lua): the next wipe with a live countdown, the 4
+    -- after it with their date (in this PC's time)
+    local menuState = rawget(_G, "BR95RankedMenu")
+    local cy = ly + 44
+    box(side, LINE, 1, -930, -660, cy - 12, cy - 10)
+    text(side, "WIPE CALENDAR", 15, GREY, -930, -660, cy, cy + 18, LEFT, true)
+    local wipeType = text(side, "", 17, GOLD, -930, -650, cy + 24, cy + 46, LEFT, true)
+    local wipeCount = text(side, "", 26, CYAN, -930, -650, cy + 48, cy + 80, LEFT, true)
+    local wipeRows = {}
+    for k = 1, 4 do wipeRows[k] = text(side, "", 13, GREY, -930, -650, cy + 90 + (k - 1) * 22, cy + 108 + (k - 1) * 22, LEFT, true) end
+    local function paintWipes()
+        if type(menuState) ~= "table" or type(menuState.nextWipes) ~= "function" then return end
+        local wipes = menuState.nextWipes(now(), 5)
+        local w = wipes[1]
+        if not w then return end
+        set(wipeType, w.rp and "NEXT: FULL WIPE (SR + RP)" or "NEXT: RANK WIPE (SR)", w.rp and 0xFF5A6E or GOLD)
+        set(wipeCount, countdown(w.t - now()))
+        for k = 1, 4 do
+            local nw = wipes[k + 1]
+            local ok, date = pcall(os.date, "%a %d/%m %H:%M", nw and nw.t or 0)
+            set(wipeRows[k], nw and (string.upper(ok and date or "?") .. "   " .. (nw.rp and "SR + RP" or "RANK")) or "")
+        end
+    end
+    local wipeSec
+    U.anims[#U.anims + 1] = function()
+        local sec = now()
+        if sec ~= wipeSec then wipeSec = sec; paintWipes() end
+    end
+
     text(side, "BALANCE", 15, GREY, -930, -660, 880, 898, LEFT)
     picture(side, STAR_ICON, -930, -900, 904, 934)
     local rpText = text(side, readRP() .. " RP", 34, GOLD, -892, -650, 900, 940, LEFT, true)
@@ -509,6 +653,17 @@ local function build(menu, controller)
             set(rpText, U.rpTarget .. " RP", GOLD)
             U.rpColored = false
         end
+    end
+
+    -- the events are seen: the NEW badge of the tab goes (tried each second until the
+    -- tab bar is reachable from this page)
+    pcall(markSeen)
+    local badgeDone, badgeNext = false, 0
+    U.anims[#U.anims + 1] = function(t)
+        if badgeDone or t < badgeNext then return end
+        badgeNext = t + 1
+        local ok, found = pcall(state.badge, root, false)
+        badgeDone = ok and found
     end
 
     -- one 16 ms timer for everything that moves (timed with the clock)

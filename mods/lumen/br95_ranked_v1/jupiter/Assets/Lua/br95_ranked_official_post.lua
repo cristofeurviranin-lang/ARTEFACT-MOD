@@ -389,12 +389,24 @@ local function install()
             title:setText(text)
             private:addElement(title)
         end)
-        -- Halloween event (31/10/2026 -> 05/11/2026 00:00 France): the ranked map is
-        -- Hellspawn (br95_ranked_playlist_post.lua); event card top right, live countdown
+        -- event card top right with a live countdown, shown while its event runs:
+        -- Halloween (31/10/2026 -> 05/11/2026 00:00 France, ranked map Hellspawn in
+        -- br95_ranked_playlist_post.lua), DOUBLE RP WEEK (06/11 01:00 -> 13/11 23:00
+        -- France, same dates as br95_ranked_hud_post.lua and br95_ranked_tab_events_post.lua)
         pcall(function()
-            local EVENT_END = 1793833200
-            if os.time() >= EVENT_END or os.time() < 1793401200 then return end
-            local card = LUI.UIElement.new(); card.id = "BR95HellspawnEvent"
+            local CARDS = {
+                { id = "BR95HellspawnEvent", from = 1793401200, to = 1793833200, color = 0xFF8A1E, bar = 0xFF6A00,
+                  title = "HELLSPAWN EVENT", sub = "RANKED PLAY ON HELLSPAWN", art = "loading_mp_jup_escape5_hell_bg" },
+                { id = "BR95DoubleRPEvent", from = 1793923200, to = 1794607200, color = 0xFFD166, bar = 0xFFB020,
+                  title = "DOUBLE RP WEEK", sub = "RP X2 + QUESTS UP TO 5000 RP", art = "menu_keyart_rankedplay_01_layer_00" },
+            }
+            local ev
+            for _, c in ipairs(CARDS) do
+                if os.time() >= c.from and os.time() < c.to then ev = c end
+            end
+            if not ev then return end
+            local EVENT_END = ev.to
+            local card = LUI.UIElement.new(); card.id = ev.id
             card:SetAnchorsAndPosition(0, 1, 0, 1, 1420, 1832, 136, 500)
             private:addElement(card)
             local function box(x1, x2, y1, y2, color, alpha)
@@ -418,13 +430,13 @@ local function install()
                 return t
             end
             box(0, 412, 0, 364, 0x000000, 0.55)
-            box(0, 6, 0, 364, 0xFF6A00, 1)
+            box(0, 6, 0, 364, ev.bar, 1)
             -- the box height sets the text height: one short line per box, with gaps
-            label(18, 400, 12, 40, 28, 0xFF8A1E, "HELLSPAWN EVENT")
-            label(18, 400, 50, 68, 18, 0xFFFFFF, "RANKED PLAY ON HELLSPAWN")
+            label(18, 400, 12, 40, 28, ev.color, ev.title)
+            label(18, 400, 50, 68, 18, 0xFFFFFF, ev.sub)
             local art = LUI.UIImage.new()
             art:SetAnchorsAndPosition(0, 1, 0, 1, 18, 400, 78, 280)
-            art:setImage(RegisterMaterial("loading_mp_jup_escape5_hell_bg"), 0)
+            art:setImage(RegisterMaterial(ev.art), 0)
             card:addElement(art)
             label(18, 400, 290, 308, 18, 0xBBBBBB, "EVENT ENDS IN")
             local count = label(18, 400, 318, 350, 32, 0xFFFFFF, "")
@@ -437,6 +449,52 @@ local function install()
             tick()
             card:registerEventHandler("br95_event_tick", function() pcall(tick) end)
             card:addElement(LUI.UITimer.new({ interval = 1000, event = "br95_event_tick", disposable = false, eventTarget = card }))
+        end)
+        -- countdown to the next wipe, under the official rank card (wipe calendar of
+        -- br95_ranked_post.lua: rank wipes, general wipes = SR + RP)
+        pcall(function()
+            local menuState = rawget(_G, "BR95RankedMenu")
+            if type(menuState) ~= "table" or type(menuState.nextWipes) ~= "function" then return end
+            local wipe = LUI.UIElement.new(); wipe.id = "BR95WipeCountdown"
+            wipe:SetAnchorsAndPosition(0, 1, 0, 1, 92, 640, 674, 708)
+            private:addElement(wipe)
+            local text = LUI.UIText.new()
+            text:SetAnchorsAndPosition(0, 1, 0, 1, 0, 548, 4, 28)
+            if FONTS and FONTS.GetFont and FONTS.PrimaryBold and FONTS.PrimaryBold.File then
+                pcall(text.SetFont, text, FONTS.GetFont(FONTS.PrimaryBold.File))
+            end
+            pcall(text.SetFontSize, text, 22)
+            if text.SetAlignment and LUI.Alignment then text:SetAlignment(LUI.Alignment.Left) end
+            wipe:addElement(text)
+            local function tick()
+                local w = menuState.nextWipes(os.time(), 1)[1]
+                if not w then return end
+                local left = math.max(0, w.t - os.time())
+                text:SetRGB(w.rp and 0xFF5A6E or 0xFFB020, 0)
+                text:setText((w.rp and "FULL WIPE (SR + RP) IN " or "RANK WIPE IN ")
+                    .. string.format("%dD %02dH %02dM %02dS", math.floor(left / 86400),
+                    math.floor(left % 86400 / 3600), math.floor(left % 3600 / 60), left % 60))
+            end
+            tick()
+            wipe:registerEventHandler("br95_wipe_tick", function() pcall(tick) end)
+            wipe:addElement(LUI.UITimer.new({ interval = 1000, event = "br95_wipe_tick", disposable = false, eventTarget = wipe }))
+        end)
+        -- "NEW" under the EVENTS tab while a live event was never opened
+        -- (BR95RankedEvents.badge of br95_ranked_tab_events_post.lua): tried each second
+        -- until the tab bar is reachable, 20 tries at most
+        pcall(function()
+            local events = rawget(_G, "BR95RankedEvents")
+            if type(events) ~= "table" or type(events.badge) ~= "function" then return end
+            local probe = LUI.UIElement.new(); probe.id = "BR95EventsBadge"
+            private:addElement(probe)
+            local tries = 0
+            probe:registerEventHandler("br95_badge_tick", function()
+                if tries >= 20 then return end
+                tries = tries + 1
+                local ok, found = pcall(events.badge, probe)
+                if ok and found then tries = 20 end
+            end)
+            probe:addElement(LUI.UITimer.new({ interval = 1000, event = "br95_badge_tick", disposable = false, eventTarget = probe }))
         end)
         return private
     end)

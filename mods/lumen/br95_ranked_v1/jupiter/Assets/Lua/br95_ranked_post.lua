@@ -59,7 +59,6 @@ local MODE_ICON = "jup_icon_mode_wz_ranked"
 -- ------------------------------------------------------------------
 local SETTINGS_FILE = "jupiter/IO/br95_settings.txt"
 local SEASON_FILE = "jupiter/IO/br95_season.txt"
-local SEASON_DAYS = 21
 local BOARD_SIZES = { 200, 500, 1000, 2000, 3000, 5000 }
 
 local function readText(path)
@@ -107,25 +106,78 @@ local function resetRanked()
     return writeText(FILE, "BR95R1|0|0|0|0|0|END")
 end
 
--- season: start time + number; past 3 weeks = new season and SR reset
--- Same calendar for every player (21 days from SEASON_EPOCH). The season file
+-- seasons = time between two WIPES, same calendar for every player (UTC times):
+--   06/11/2026 22:00 France: rank wipe (SR)
+--   13/11/2026 02:00 France: general wipe (SR + RP)
+--   then a rank wipe every Sunday 13:00 France (12:00 UTC in winter, 11:00 UTC in summer)
+-- Season 1 started at SEASON_EPOCH; each wipe passed = next season. The season file
 -- keeps the number of the season the saved SR belongs to: another number = reset.
+-- SAME CALENDAR in the ARTEFACT launcher (core.py, WorldSync.season_at): the online
+-- ranking only shows the current season.
 local SEASON_EPOCH = 1792613644
+local WIPES = { { t = 1793998800 }, { t = 1794531600, rp = true } }
+local WEEKLY_FROM = 1794744000           -- Sunday 15/11/2026 12:00 UTC (13:00 France)
+
+-- k-th Sunday wipe: 13:00 French time (summer time from the last Sunday of March
+-- to the last Sunday of October, as in the EU)
+local function weeklyWipe(k)
+    local t = WEEKLY_FROM + k * 604800
+    local d = os.date("!*t", t)
+    local summer = (d.month > 3 and d.month < 10) or (d.month == 3 and d.day >= 25) or (d.month == 10 and d.day < 25)
+    return summer and (t - 3600) or t
+end
+
+-- season of a time: number (1 + wipes passed), its start, the next wipe
+local function seasonAt(now)
+    local number, start, nextT = 1, SEASON_EPOCH, nil
+    for _, w in ipairs(WIPES) do
+        if now >= w.t then number, start = number + 1, w.t elseif not nextT then nextT = w.t end
+    end
+    local k = 0
+    while not nextT do
+        local t = weeklyWipe(k)
+        if now >= t then number, start = number + 1, t else nextT = t end
+        k = k + 1
+    end
+    return number, start, nextT
+end
+
+-- the next `count` wipes after `now`: { { t = time, rp = true for a general wipe }, ... }
+-- (shared: wipe countdown of the ranked lobby, wipe calendar of the EVENTS tab)
+local function nextWipes(now, count)
+    local list = {}
+    for _, w in ipairs(WIPES) do
+        if w.t > now then list[#list + 1] = { t = w.t, rp = w.rp } end
+    end
+    local k = 0
+    while #list < count do
+        local t = weeklyWipe(k)
+        if t > now then list[#list + 1] = { t = t } end
+        k = k + 1
+    end
+    while #list > count do table.remove(list) end
+    return list
+end
+state.nextWipes = nextWipes
+
 local function checkSeason()
     local now = os.time()
-    local length = SEASON_DAYS * 86400
-    local number = math.max(1, math.floor((now - SEASON_EPOCH) / length) + 1)
-    local start = SEASON_EPOCH + (number - 1) * length
+    local number, start, nextT = seasonAt(now)
     local text = readText(SEASON_FILE)
     local stored = text and tonumber(text:match("^BR95S1|%d+|(%d+)"))
     if stored ~= number then
         writeText(SEASON_FILE, "BR95S1|" .. start .. "|" .. number .. "|END")
         if stored then
             resetRanked()
+            -- a general wipe passed since the saved season: the RP go too
+            for _, w in ipairs(WIPES) do
+                local s = seasonAt(w.t)
+                if w.rp and s > stored and s <= number then writeText(RP_FILE, "BR95P1|0|END") end
+            end
             if DebugPrint then pcall(DebugPrint, "[BR95Ranked] new season " .. number .. ", SR reset") end
         end
     end
-    return number, start + length - now
+    return number, nextT - now, start
 end
 
 -- manual reset: SR back to 0 (the season number follows the shared calendar)
@@ -656,7 +708,7 @@ local function build(menu, controller)
 
     -- data
     local settings = loadSettings()
-    local seasonNumber, seasonLeft = checkSeason()
+    local seasonNumber, seasonLeft, seasonBegin = checkSeason()
     local p = readProfile()
     local i = rankIndex(p.sr)
     local rank = RANKS[i]
@@ -1240,7 +1292,7 @@ local function build(menu, controller)
     local seasonHistory, sqCounts
     do
     v = views[7]
-    local seasonStart = os.time() + seasonLeft - SEASON_DAYS * 86400
+    local seasonStart = seasonBegin
     seasonHistory = {}
     for _, m in ipairs(history) do if m.time >= seasonStart then seasonHistory[#seasonHistory + 1] = m end end
     local sq = Q.seasonQuests()
@@ -1588,7 +1640,7 @@ local function build(menu, controller)
         return 0
     end, function(k) s.board = BOARD_SIZES[k]; entries = nil end, 3)
 
-    section(30, 760, 748, "SEASON", T("EVERY %s DAYS", SEASON_DAYS))
+    section(30, 760, 748, "SEASON", "RANK WIPE EVERY SUNDAY 13:00 (FRANCE)")
     local armed = 0
     local lamp = box(v, RED, 1, 30, 36, 790, 838)
     pageButton(5, "NEW SEASON (RESET SR)", 44, 760, 790, 838, function(lbl)

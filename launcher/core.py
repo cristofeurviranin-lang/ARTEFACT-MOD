@@ -642,7 +642,12 @@ WZ_URL = "https://biaokohvbbgjkcxmtolg.supabase.co/rest/v1"
 WZ_KEY = "sb_publishable_swYoipVjKkhnSK7spKFsOA_3f39aq8p"   # public key: reads the ladder, calls the server function
 WZ_COLUMNS = ("player_id,name,country,sr,best_sr,matches,kills,deaths,wins,season,"
               "avatar,banner,title,weapon,discord,is_bot,updated_at,created_at")
-WZ_SEASON_EPOCH, WZ_SEASON_DAYS = 1792613644, 21           # same calendar as br95_ranked_post.lua
+# seasons = time between two wipes, SAME CALENDAR as br95_ranked_post.lua (seasonAt): season 1
+# from the epoch, rank wipe 06/11/2026 22:00 France, general wipe 13/11/2026 02:00 France, then a
+# rank wipe every Sunday 13:00 France (12:00 UTC in winter, 11:00 UTC in summer)
+WZ_SEASON_EPOCH = 1792613644
+WZ_WIPES = (1793998800, 1794531600)
+WZ_WEEKLY_FROM = 1794744000
 WZ_NAME = re.compile(r"^[A-Za-z0-9_.-]{3,16}$")
 WZ_DISCORD = re.compile(r"^[a-z0-9_.]{0,32}$")
 WZ_COUNTRY = re.compile(r"^[A-Z]{2}$")
@@ -661,6 +666,11 @@ def wz_shortcut_path():
 def set_world_sync(game, on):
     """Starts the world ranking job with Windows and right away (on), or stops it for good (off).
     Never raises: the launcher works the same without it. Returns True when it was applied."""
+    # no trailing backslash: in the shortcut ("...\1.21\") it would escape the closing quote
+    # and the job would get the folder with a " at the end (mods_folder() ends with one)
+    if not game:
+        return False
+    game = os.path.normpath(game)
     stop_file = os.path.join(wz_appdata(), "wz_sync.stop")
     shortcut = wz_shortcut_path()
     try:
@@ -707,7 +717,8 @@ class WorldSync:
     LOOP_SECONDS, BOARD_EVERY, RESEND_EVERY, BOARD_SIZE = 2, 40, 600, 300
 
     def __init__(self, game):
-        self.game = os.path.normpath(game)
+        # (a shortcut made by the first 0.6 launcher passed the folder with a " at the end)
+        self.game = os.path.normpath(game.strip().strip('"'))
         self.io = os.path.join(self.game, "jupiter", "IO")
         self.appdata = wz_appdata()
         self.log_file = os.path.join(self.appdata, "wz_sync.log")
@@ -773,8 +784,29 @@ class WorldSync:
 
     # ------------------------------------------------ this PC
     @staticmethod
-    def season_now():
-        return max(1, int((time.time() - WZ_SEASON_EPOCH) // (WZ_SEASON_DAYS * 86400)) + 1)
+    def weekly_wipe(k):
+        t = WZ_WEEKLY_FROM + k * 604800
+        d = datetime.datetime.fromtimestamp(t, datetime.timezone.utc)
+        summer = 3 < d.month < 10 or (d.month == 3 and d.day >= 25) or (d.month == 10 and d.day < 25)
+        return t - 3600 if summer else t
+
+    @classmethod
+    def season_at(cls, now):
+        """(season number, its start): 1 + wipes passed."""
+        number, start = 1, WZ_SEASON_EPOCH
+        for t in WZ_WIPES:
+            if now >= t:
+                number, start = number + 1, t
+        if now >= WZ_WIPES[-1]:
+            k = 0
+            while now >= cls.weekly_wipe(k):
+                number, start = number + 1, cls.weekly_wipe(k)
+                k += 1
+        return number, start
+
+    @classmethod
+    def season_now(cls):
+        return cls.season_at(time.time())[0]
 
     def identity(self):
         backup = os.path.join(self.appdata, "wr_id.txt")
@@ -820,8 +852,7 @@ class WorldSync:
         next time the RANKED tab opens) and the season's matches from the match history, so kills,
         deaths and wins come from the same matches (the profile's own counters only when the history
         has none)."""
-        season = self.season_now()
-        start = WZ_SEASON_EPOCH + (season - 1) * WZ_SEASON_DAYS * 86400
+        season, start = self.season_at(time.time())
         sr = matches = kills = 0
         profile = re.match(r"^BR95R1\|(-?\d+)\|(-?\d+)\|(-?\d+)\|", self.read("br95_ranked.txt"))
         stored = re.match(r"^BR95S1\|\d+\|(\d+)\|", self.read("br95_season.txt"))
