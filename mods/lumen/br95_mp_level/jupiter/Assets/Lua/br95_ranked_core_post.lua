@@ -376,45 +376,15 @@ local function onPacket(p)
     end
 end
 
--- ---- seasons -----------------------------------------------------------
--- Same calendar for every player (21 days from SEASON_EPOCH), so the world
--- ranking compares players of the same season. The season file keeps the
--- number of the season the saved SR belongs to: another number = SR reset.
--- Checked at load and then every minute while in the menu (never in a match).
-local SEASON_FILE = DIR .. "br95_season.txt"       -- BR95S1|start|number|END
-local SEASON_EPOCH = 1792613644
-local SEASON_LENGTH = 21 * 86400
-local lastSeasonCheck = 0
-
-local function checkSeason()
-    local now = os.time()
-    local number = math.max(1, math.floor((now - SEASON_EPOCH) / SEASON_LENGTH) + 1)
-    local start = SEASON_EPOCH + (number - 1) * SEASON_LENGTH
-    local text = readText(SEASON_FILE)
-    local stored = text and tonumber(text:match("^BR95S1|%d+|(%d+)"))
-    if stored ~= number then
-        writeText(SEASON_FILE, "BR95S1|" .. start .. "|" .. number .. "|END")
-        if stored then
-            writeText(PROFILE_FILE, "BR95R1|0|0|0|0|0|END")
-            writeText(STREAK_FILE, "BR95W1|0|0|END")
-            if DebugPrint then pcall(DebugPrint, "[BR95Ranked] new season " .. number .. ", SR reset") end
-        end
-    end
-end
-
-local function seasonTick()
-    local now = os.time()
-    if now - lastSeasonCheck < 60 then return end
-    lastSeasonCheck = now
-    checkSeason()
-end
+-- The Warzone ranked seasons (wipes of br95_season.txt / br95_ranked.txt) belong to the
+-- Ranked mod alone (br95_ranked_post.lua). The check that was here used the old 21-day
+-- calendar: it disagreed with the wipe calendar and reset the SR every minute in the menu.
 local function poll()
     local inFront = false
     pcall(function() inFront = Engine.@InFrontend() end)
     if inFront then
         -- back in the menu: forget this match (leaving before the end only costs the entry fee)
         state.active, state.skipped, state.finished, state.lastSeq = false, false, false, nil
-        pcall(seasonTick)
         return
     end
     local controller = 0

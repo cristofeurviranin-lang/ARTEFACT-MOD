@@ -177,6 +177,23 @@ local function checkSeason()
             if DebugPrint then pcall(DebugPrint, "[BR95Ranked] new season " .. number .. ", SR reset") end
         end
     end
+    -- once per season (br95_srfix.txt): the MP LEVEL mod (old 21-day calendar) reset the
+    -- SR in a loop; the SR after the last match of this season (match history) comes back
+    -- when the profile holds less. No match this season = nothing to give back.
+    local fix = readText("jupiter/IO/br95_srfix.txt") or ""
+    if not fix:match("^BR95X1|" .. number .. "|") then
+        writeText("jupiter/IO/br95_srfix.txt", "BR95X1|" .. number .. "|END")
+        local lastSR
+        for line in (readText(HISTORY_FILE) or ""):gmatch("[^\n]+") do
+            local t, sr = line:match("^H|(%d+)|(%-?%d+)|")
+            if t and tonumber(t) >= start then lastSR = tonumber(sr) end
+        end
+        local sr, m, k, b, l = (readText(FILE) or ""):match("^BR95R1|(%-?%d+)|(%-?%d+)|(%-?%d+)|(%-?%d+)|(%-?%d+)|END")
+        if lastSR and sr and tonumber(sr) < lastSR then
+            writeText(FILE, "BR95R1|" .. lastSR .. "|" .. m .. "|" .. k .. "|" .. math.max(tonumber(b), lastSR) .. "|" .. l .. "|END")
+            if DebugPrint then pcall(DebugPrint, "[BR95Ranked] SR given back: " .. lastSR) end
+        end
+    end
     return number, nextT - now, start
 end
 
