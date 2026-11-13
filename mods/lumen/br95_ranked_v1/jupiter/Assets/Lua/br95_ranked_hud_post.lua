@@ -54,6 +54,17 @@ local function readLive()
     return live
 end
 
+-- banned by the world ranking's anti-cheat: the SR is shown as BAN
+local function isBanned()
+    local banned = false
+    pcall(function()
+        local f = io.open("jupiter/IO/br95_wr_ban.txt", "r")
+        if not f then return end
+        banned = (f:read("*a") or ""):match("^BR95WX1|1|") ~= nil; f:close()
+    end)
+    return banned
+end
+
 local function rankIndex(sr)
     local index = 1
     for i, r in ipairs(RANKS) do if sr >= r.start then index = i end end
@@ -273,7 +284,12 @@ local function refresh(hud)
     local color = RANKS[rankIndex(live.sr)].color
     local label = rankLabel(live.sr)
     hud.rank:setText(label); hud.rank:SetRGB(color, 0)
-    hud.sr:setText(live.sr .. (hud.srIcon and "" or " SR"))
+    if hud.banned == nil then hud.banned = isBanned() end
+    if hud.banned then
+        hud.sr:setText("BAN"); hud.sr:SetRGB(RED, 0)
+    else
+        hud.sr:setText(live.sr .. (hud.srIcon and "" or " SR"))
+    end
     hud.delta:setText((live.delta >= 0 and "+" or "") .. live.delta)
     hud.delta:SetRGB(live.delta >= 0 and GREEN or RED, 0)
     hud.stats:setText(T("KILLS %s    DEATHS %s", live.kills, live.deaths))
@@ -331,7 +347,8 @@ local function showEndScreen(root, live, rp)
     rank:setText(rankLabel(after)); rank:SetRGB(color, 0)
     local icon = srIcon(panel, 282, 176, 34)
     local sr = newText(panel, 40, true, icon and 326 or 280, 600, 170, 218)
-    sr:setText(after .. (icon and "" or " SR")); sr:SetRGB(WHITE, 0)
+    if isBanned() then sr:setText("BAN"); sr:SetRGB(RED, 0)
+    else sr:setText(after .. (icon and "" or " SR")); sr:SetRGB(WHITE, 0) end
     local delta = newText(panel, 40, true, 600, 850, 170, 218, RIGHT)
     delta:setText((live.delta >= 0 and "+" or "") .. live.delta)
     delta:SetRGB(live.delta >= 0 and GREEN or RED, 0)

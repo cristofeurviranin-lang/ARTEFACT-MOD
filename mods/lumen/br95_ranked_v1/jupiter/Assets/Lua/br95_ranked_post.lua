@@ -70,6 +70,11 @@ local function readText(path)
     return text
 end
 
+-- banned by the world ranking's anti-cheat (br95_wr_ban.txt, written by the launcher's sync)
+local function isBanned()
+    return (readText("jupiter/IO/br95_wr_ban.txt") or ""):match("^BR95WX1|1|") ~= nil
+end
+
 local function writeText(path, text)
     local ok = pcall(function()
         local f = io.open(path, "w")
@@ -109,19 +114,21 @@ end
 -- seasons = time between two WIPES, same calendar for every player (UTC times):
 --   06/11/2026 22:00 France: rank wipe (SR)
 --   13/11/2026 02:00 France: general wipe (SR + RP)
---   then a rank wipe every Sunday 13:00 France (12:00 UTC in winter, 11:00 UTC in summer)
+--   then a rank wipe every 10 days at 13:00 France from Sunday 22/11/2026 (12:00 UTC in
+--   winter, 11:00 UTC in summer; the 15/11 one was cancelled)
 -- Season 1 started at SEASON_EPOCH; each wipe passed = next season. The season file
 -- keeps the number of the season the saved SR belongs to: another number = reset.
 -- SAME CALENDAR in the ARTEFACT launcher (core.py, WorldSync.season_at): the online
 -- ranking only shows the current season.
 local SEASON_EPOCH = 1792613644
 local WIPES = { { t = 1793998800 }, { t = 1794531600, rp = true } }
-local WEEKLY_FROM = 1794744000           -- Sunday 15/11/2026 12:00 UTC (13:00 France)
+local WEEKLY_FROM = 1795348800           -- Sunday 22/11/2026 12:00 UTC (13:00 France)
+local WIPE_EVERY = 864000                -- 10 days
 
--- k-th Sunday wipe: 13:00 French time (summer time from the last Sunday of March
+-- k-th regular wipe: 13:00 French time (summer time from the last Sunday of March
 -- to the last Sunday of October, as in the EU)
 local function weeklyWipe(k)
-    local t = WEEKLY_FROM + k * 604800
+    local t = WEEKLY_FROM + k * WIPE_EVERY
     local d = os.date("!*t", t)
     local summer = (d.month > 3 and d.month < 10) or (d.month == 3 and d.day >= 25) or (d.month == 10 and d.day < 25)
     return summer and (t - 3600) or t
@@ -861,8 +868,9 @@ local function build(menu, controller)
     local pctText = text(side, "0%", 20, UI.CYAN, -945, -645, 350, 374, nil, true)
     accent(text(side, stepLabel(list[cur]), 26, WHITE, -950, -640, 378, 410, nil, true), 2)
     -- placed for the final number (centred), then counts up from 0
-    local srText = srValue(side, p.sr, 36, WHITE, RX, 416)
-    set(srText, "0")
+    local banned = (readText("jupiter/IO/br95_wr_ban.txt") or ""):match("^BR95WX1|1|") ~= nil
+    local srText = srValue(side, banned and "BAN" or p.sr, 36, banned and 0xE04040 or WHITE, RX, 416)
+    if not banned then set(srText, "0") end
     text(side, T("%s OF PLAYERS", percentText(p.sr)), 16, GREY, -950, -640, 462, 482, nil, true)
     -- RP chip (bottom of the column)
     box(side, RPC, 0.12, -935, -655, 930, 972)
@@ -917,12 +925,12 @@ local function build(menu, controller)
     enter(hdr, 120, 520, 0, -28)
     local flashed = false
     tween(400, 1500, easeOut, function(e)
-        set(srText, tostring(math.floor(p.sr * e + 0.5)))
+        if not banned then set(srText, tostring(math.floor(p.sr * e + 0.5))) end
         set(rpText, math.floor(rp * e + 0.5) .. " RP")
         set(pctText, math.floor(heroPct * 100 * e + 0.5) .. "%")
         setHero(heroPct * e)
         setRing(heroPct * e)
-        if e >= 1 and not flashed then
+        if e >= 1 and not flashed and not banned then
             flashed = true
             pcall(srText.SetRGB, srText, rank.color, 0)
             pcall(srText.SetRGB, srText, WHITE, 700)
@@ -1657,7 +1665,7 @@ local function build(menu, controller)
         return 0
     end, function(k) s.board = BOARD_SIZES[k]; entries = nil end, 3)
 
-    section(30, 760, 748, "SEASON", "RANK WIPE EVERY SUNDAY 13:00 (FRANCE)")
+    section(30, 760, 748, "SEASON", "RANK WIPE EVERY 10 DAYS 13:00 (FRANCE)")
     local armed = 0
     local lamp = box(v, RED, 1, 30, 36, 790, 838)
     pageButton(5, "NEW SEASON (RESET SR)", 44, 760, 790, 838, function(lbl)
@@ -1822,7 +1830,7 @@ end
 -- shared with the lobby card (br95_ranked_lobby_post.lua)
 state.shared = { RANKS = RANKS, readProfile = readProfile, rankIndex = rankIndex, steps = steps, stepOf = stepOf,
     stepLabel = stepLabel, shieldName = shieldName, tierOverlay = tierOverlay, percentText = percentText,
-    font = font, SR_ICON = SR_ICON, STAR_ICON = STAR_ICON, readRP = readRP }
+    font = font, SR_ICON = SR_ICON, STAR_ICON = STAR_ICON, readRP = readRP, isBanned = isBanned }
 
 local function install()
     if state.installed then return true end

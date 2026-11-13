@@ -147,7 +147,8 @@ local function readBoard()
                 best = tonumber(f[7]) or 0, matches = tonumber(f[8]) or 0, kills = tonumber(f[9]) or 0,
                 deaths = tonumber(f[10]) or 0, wins = tonumber(f[11]) or 0, avatar = tonumber(f[12]) or 0,
                 banner = tonumber(f[13]) or 0, title = tonumber(f[14]) or 0, weapon = tonumber(f[15]) or 0,
-                bot = f[16] == "1", updated = tonumber(f[17]) or 0, created = tonumber(f[18]) or 0, discord = f[19] }
+                bot = f[16] == "1", updated = tonumber(f[17]) or 0, created = tonumber(f[18]) or 0, discord = f[19],
+                banned = f[20] == "1" }
             if f[1] == "P" then board.list[#board.list + 1] = e else board.me = e end
         end
     end
@@ -367,7 +368,13 @@ local function newUI(root, controller)
         local tag = { back = U.box(GREY, 0, l, r, t, b), text = U.text("", 13, 0x20185A, l, r, t + (b - t) / 2 - 8, t + (b - t) / 2 + 8, U.CENTER, true) }
         return tag
     end
-    function U.setBot(tag, on) U.fade(tag.back, on and 1 or 0); U.set(tag.text, on and "BOT" or "") end
+    -- same tag shows BAN (red) for a player banned by the anti-cheat
+    function U.setBot(tag, on, ban)
+        local ban_ = ban and not on
+        U.tint(tag.back, ban_ and RED or GREY)
+        U.fade(tag.back, (on or ban_) and 1 or 0)
+        U.set(tag.text, on and "BOT" or (ban_ and "BAN" or ""), ban_ and WHITE or 0x20185A)
+    end
 
     -- tweens: step(e) with e 0 -> 1 along `ease`, after `delay` ms, during `dur` ms;
     -- `fade` fades an element in; `tag` lets a later tween of the same kind stop it
@@ -576,7 +583,9 @@ local function buildBoard(U)
         -- info line: warnings first
         local st = U.syncState_
         local info, color = "", GREY
-        if U.profile and U.profile.joined and st == "NAMETAKEN" then
+        if st == "BANNED" then
+            info, color = "BANNED BY ARTEFACT ANTI-CHEAT: MODIFIED FILES", RED
+        elseif U.profile and U.profile.joined and st == "NAMETAKEN" then
             info, color = "THIS PSEUDO IS ALREADY TAKEN: EDIT YOUR PROFILE", RED
         elseif st == "OFF" then
             info, color = "THE RANKING CANNOT UPDATE: OPEN THE ARTEFACT LAUNCHER ONCE (IT STARTS THE SYNC)", RED
@@ -595,7 +604,7 @@ local function buildBoard(U)
                 local _, _, divColor, shield = division(e.sr)
                 U.setPicture(P.banner, itemImage(e.banner))
                 U.setPicture(P.avatar, itemImage(e.avatar))
-                U.setBot(P.bot, e.bot)
+                U.setBot(P.bot, e.bot, e.banned)
                 U.setFlag(P.flag, e.country)
                 U.set(P.name, e.name, (e.id == U.id) and GREEN or WHITE)
                 U.set(P.title, TITLES[e.title] or "")
@@ -622,7 +631,7 @@ local function buildBoard(U)
                 U.setPicture(R.avatar, itemImage(e.avatar))
                 U.set(R.name, e.name, me and GREEN or WHITE)
                 U.set(R.title, TITLES[e.title] or "")
-                U.setBot(R.bot, e.bot)
+                U.setBot(R.bot, e.bot, e.banned)
                 U.setPicture(R.shield, shield)
                 U.set(R.div, label, divColor)
                 U.set(R.matches, tostring(e.matches))
@@ -719,7 +728,7 @@ local function buildProfile(U)
         local _, label, divColor, shield = division(e.sr)
         U.setPicture(P.banner, itemImage(e.banner))
         U.setPicture(P.avatar, itemImage(e.avatar))
-        U.setBot(P.bot, e.bot)
+        U.setBot(P.bot, e.bot, e.banned)
         U.set(P.name, e.name, me and GREEN or WHITE)
         U.set(P.title, TITLES[e.title] or "")
         U.setFlag(P.flag, e.country)
@@ -737,7 +746,8 @@ local function buildProfile(U)
         U.set(P.info[1], "MEMBER SINCE   " .. ((e.created or 0) > 0 and okC and created or "-"))
         U.set(P.info[2], "LAST UPDATE   " .. ((e.updated or 0) > 0 and ago(e.updated) or "-"))
         U.set(P.info[3], "COUNTRY   " .. (e.country or "-"))
-        U.set(P.info[4], e.bot and "THIS PLAYER IS A BOT OF THE SERVER" or (me and "THIS IS YOU" or ""))
+        U.set(P.info[4], e.bot and "THIS PLAYER IS A BOT OF THE SERVER"
+            or (e.banned and "BANNED: MODIFIED FILES" or (me and "THIS IS YOU" or "")))
         U.setButton(P.editBtn, me)
         U.set(P.msg, "")
         U.show("profile", me and "me" or "board")
@@ -1155,7 +1165,9 @@ local function build(menu, controller)
             U.setPicture(U.meAvatar, nil)
             U.set(U.meName, "NO PROFILE YET")
         end
-        if U.syncState_ == "NAMETAKEN" and p and p.joined then
+        if U.syncState_ == "BANNED" then
+            U.set(U.mePlace, "BANNED", RED)
+        elseif U.syncState_ == "NAMETAKEN" and p and p.joined then
             U.set(U.mePlace, "PSEUDO ALREADY TAKEN", RED)
         elseif mine and p and p.joined then
             U.set(U.mePlace, "#" .. mine.place .. " OF " .. (U.board.total or 0), CYAN)
@@ -1183,6 +1195,9 @@ local function build(menu, controller)
         elseif st.state == "ERROR" then
             state, color = "ERROR", RED
             line1, line2, line3 = "SYNC ERROR", st.message, ""
+        elseif st.state == "BANNED" then
+            state, color = "BANNED", RED
+            line1, line2, line3 = "BANNED", "ARTEFACT ANTI-CHEAT", "MODIFIED FILES"
         else
             state, color = (st.state == "NAMETAKEN") and "NAMETAKEN" or "ONLINE", GREEN
             line1 = "ONLINE"

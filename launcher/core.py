@@ -641,13 +641,14 @@ WZ_RUN_VALUE = "BR95WzSync"                                # old way, removed wh
 WZ_URL = "https://biaokohvbbgjkcxmtolg.supabase.co/rest/v1"
 WZ_KEY = "sb_publishable_swYoipVjKkhnSK7spKFsOA_3f39aq8p"   # public key: reads the ladder, calls the server function
 WZ_COLUMNS = ("player_id,name,country,sr,best_sr,matches,kills,deaths,wins,season,"
-              "avatar,banner,title,weapon,discord,is_bot,updated_at,created_at")
+              "avatar,banner,title,weapon,discord,is_bot,updated_at,created_at,banned")
 # seasons = time between two wipes, SAME CALENDAR as br95_ranked_post.lua (seasonAt): season 1
 # from the epoch, rank wipe 06/11/2026 22:00 France, general wipe 13/11/2026 02:00 France, then a
 # rank wipe every Sunday 13:00 France (12:00 UTC in winter, 11:00 UTC in summer)
 WZ_SEASON_EPOCH = 1792613644
 WZ_WIPES = (1793998800, 1794531600)
-WZ_WEEKLY_FROM = 1794744000
+WZ_WEEKLY_FROM = 1795348800       # Sunday 22/11/2026 13:00 France (the 15/11 wipe was cancelled)
+WZ_WIPE_EVERY = 864000            # then every 10 days
 WZ_NAME = re.compile(r"^[A-Za-z0-9_.-]{3,16}$")
 WZ_DISCORD = re.compile(r"^[a-z0-9_.]{0,32}$")
 WZ_COUNTRY = re.compile(r"^[A-Z]{2}$")
@@ -785,7 +786,7 @@ class WorldSync:
     # ------------------------------------------------ this PC
     @staticmethod
     def weekly_wipe(k):
-        t = WZ_WEEKLY_FROM + k * 604800
+        t = WZ_WEEKLY_FROM + k * WZ_WIPE_EVERY
         d = datetime.datetime.fromtimestamp(t, datetime.timezone.utc)
         summer = 3 < d.month < 10 or (d.month == 3 and d.day >= 25) or (d.month == 10 and d.day < 25)
         return t - 3600 if summer else t
@@ -906,25 +907,86 @@ class WorldSync:
                          num("sr"), num("best_sr"), num("matches"), num("kills"), num("deaths"), num("wins"),
                          num("avatar"), num("banner"), num("title"), num("weapon"), "1" if r.get("is_bot") else "0",
                          str(self.epoch(r.get("updated_at"))), str(self.epoch(r.get("created_at"))),
-                         clean(r.get("discord")), "END"])
+                         clean(r.get("discord")), "1" if r.get("banned") else "0", "END"])
+
+    EVIDENCE_TEXT = 60000
+
+    def evidence(self):
+        """Proof kept by the server when the anti-cheat bans this PC (private table, admin only):
+        the ranked save files as they are now, and every file of the BR95 mods checked against
+        the launcher's manifest (modified or missing ones listed)."""
+        files = {}
+        try:
+            names = sorted(os.listdir(self.io))
+        except OSError:
+            names = []
+        for name in names:
+            if name.endswith(".txt") and re.match(r"^br95_(ranked|season|srfix|rp|wr_profile)", name):
+                files[name] = self.read(name)[-self.EVIDENCE_TEXT:]
+        checked, changed = 0, []
+        try:
+            manifest = load_state().get("manifest") or {}
+            for mod in (manifest.get("mods") or []) + (manifest.get("mods_extra") or []):
+                if mod.get("id") not in WZ_SYNC_MODS | {"br95_mp_level"}:
+                    continue
+                for entry in mod.get("files") or []:
+                    path = os.path.join(self.game, safe_relpath(entry["path"]))
+                    if not os.path.exists(path):
+                        continue        # (MP LEVEL may not be installed here)
+                    checked += 1
+                    digest = sha256_of(path)
+                    if digest != entry.get("sha256"):
+                        changed.append({"mod": mod.get("id"), "path": entry["path"], "sha256": digest,
+                                        "official": entry.get("sha256"), "size": os.path.getsize(path),
+                                        "modified_at": int(os.path.getmtime(path))})
+        except Exception as error:      # never let the proof stop the sync
+            changed.append({"error": str(error)[:200]})
+        return files, {"checked": checked, "changed": changed}
+
+    def send_evidence(self, pid, secret):
+        files, scripts = self.evidence()
+        _, result = self.http("POST", "/rpc/submit_wz_evidence",
+                              {"p_id": pid, "p_secret": secret, "p_files": files, "p_scripts": scripts})
+        self.log("evidence -> %s (%d files, %d scripts changed)" % (result, len(files), len(scripts["changed"])))
+
+    def set_banned(self, banned):
+        # read by the game: the SR is shown as BAN everywhere while this says 1
+        line = "BR95WX1|%d|END" % (1 if banned else 0)
+        if self.read("br95_wr_ban.txt") != line:
+            self.write("br95_wr_ban.txt", line)
 
     def board(self, pid, registered):
         season = self.season_now()
-        shown = "or=(season.eq.%d,is_bot.is.true)" % season
-        headers, rows = self.http("GET", "/wz_ranked?select=%s&%s&order=sr.desc,updated_at.asc&limit=%d"
+        # banned players stay in the ranking for good (BAN tag), under every legit player
+        shown = "or=(season.eq.%d,is_bot.is.true,banned.is.true)" % season
+        headers, rows = self.http("GET", "/wz_ranked?select=%s&%s&order=banned.asc,sr.desc,updated_at.asc&limit=%d"
                                   % (WZ_COLUMNS, shown, self.BOARD_SIZE), headers={"Prefer": "count=exact"})
         rows = rows or []
         lines = ["BR95WB1|%d|%d|%d|END" % (int(time.time()), self.total_of(headers) or len(rows), season)]
         mine = False
         for place, r in enumerate(rows, 1):
             lines.append(self.row("P", place, r))
-            mine = mine or r.get("player_id") == pid
+            if r.get("player_id") == pid:
+                mine = True
+                self.set_banned(r.get("banned"))
         if registered and not mine:
             _, me = self.http("GET", "/wz_ranked?select=%s&player_id=eq.%s&%s" % (WZ_COLUMNS, pid, shown))
             if me:
-                headers, _ = self.http("GET", "/wz_ranked?select=player_id&%s&sr=gt.%d&limit=1"
-                                       % (shown, int(me[0].get("sr") or 0)), headers={"Prefer": "count=exact"})
-                lines.append(self.row("M", self.total_of(headers) + 1, me[0]))
+                self.set_banned(me[0].get("banned"))
+                sr = int(me[0].get("sr") or 0)
+                # places above: every legit player with more SR (+ every legit player and the banned
+                # ones with more SR when I am banned)
+                if me[0].get("banned"):
+                    h1, _ = self.http("GET", "/wz_ranked?select=player_id&%s&banned=is.false&limit=1" % shown,
+                                      headers={"Prefer": "count=exact"})
+                    h2, _ = self.http("GET", "/wz_ranked?select=player_id&banned=is.true&sr=gt.%d&limit=1" % sr,
+                                      headers={"Prefer": "count=exact"})
+                    above = self.total_of(h1) + self.total_of(h2)
+                else:
+                    h1, _ = self.http("GET", "/wz_ranked?select=player_id&%s&banned=is.false&sr=gt.%d&limit=1"
+                                      % (shown, sr), headers={"Prefer": "count=exact"})
+                    above = self.total_of(h1)
+                lines.append(self.row("M", above + 1, me[0]))
         self.write("br95_wr_board.txt", "\n".join(lines) + "\n")
         return len(rows)
 
@@ -955,6 +1017,7 @@ class WorldSync:
         pid, secret = self.identity()
         last_sig, last_sent, last_board, last_request, registered = None, 0, 0, None, False
         state, message = "OK", "WAITING FOR YOUR PROFILE"
+        evidence_sent = False
         while True:
             reason = self.should_stop(started)
             if reason:
@@ -970,8 +1033,19 @@ class WorldSync:
                         last_sig, last_sent, last_board = sig, time.time(), 0
                         if result in ("created", "updated"):
                             state, message, registered = "OK", "SENT SR %d" % s["sr"], True
+                            self.set_banned(False)
                         elif result == "name taken":
                             state, message = "NAMETAKEN", "THIS NAME IS ALREADY TAKEN"
+                        elif result == "banned":
+                            # the server's anti-cheat refused this profile for good
+                            state, message, registered = "BANNED", "BANNED: MODIFIED FILES", True
+                            self.set_banned(True)
+                            if not evidence_sent:
+                                evidence_sent = True
+                                try:
+                                    self.send_evidence(pid, secret)
+                                except Exception as error:
+                                    self.log("evidence: %s" % error)
                         else:
                             state, message = "ERROR", "SERVER: " + result.upper()
                         self.log("submit %s sr=%d -> %s" % (p["name"], s["sr"], result))
@@ -980,7 +1054,8 @@ class WorldSync:
                     last_request = request
                     count = self.board(pid, registered)
                     last_board = time.time()
-                    if state == "OFFLINE" or message == "WAITING FOR YOUR PROFILE" and not p:
+                    # the server answered: a past network / server error is over
+                    if state in ("OFFLINE", "ERROR") or message == "WAITING FOR YOUR PROFILE" and not p:
                         state, message = "OK", "%d PLAYERS" % count
                 self.status(state, message)
             except urllib.error.HTTPError as error:
